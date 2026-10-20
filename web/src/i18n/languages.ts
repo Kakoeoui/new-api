@@ -24,6 +24,7 @@ export const INTERFACE_LANGUAGE_OPTIONS = [
   { code: 'ja', label: '日本語' },
   { code: 'vi', label: 'Tiếng Việt' },
   { code: 'zhTW', label: '繁體中文' },
+  { code: 'th', label: 'ภาษาไทย' },
 ] as const
 
 export type InterfaceLanguageCode =
@@ -33,6 +34,7 @@ export function normalizeInterfaceLanguage(value?: string | null): string {
   if (!value) return 'en'
 
   let normalized = value.trim().replaceAll('_', '-').toLowerCase()
+  if (normalized === 'th' || normalized.startsWith('th-')) normalized = 'th'
   if (
     value === 'zh-TW' ||
     value === 'zh-HK' ||
@@ -57,11 +59,12 @@ export function normalizeInterfaceLanguage(value?: string | null): string {
  * Browsers report standard BCP-47 tags (`zh-CN`, `zh-TW`, `zh-Hant`, `zh`, ...),
  * but `supportedLngs`/resources use the non-standard camelCase codes, so without
  * this mapping a Chinese browser would never match and fall back to English.
- * Non-Chinese codes are returned unchanged so i18next's own `supportedLngs`
+ * Thai region tags map to `th`. Other codes pass through so `supportedLngs`
  * matching still applies (e.g. `fr-FR` -> `fr`, `ja` -> `ja`).
  */
 export function convertDetectedLanguage(value: string): string {
   const lower = value.trim().replaceAll('_', '-').toLowerCase()
+  if (lower === 'th' || lower.startsWith('th-')) return 'th'
   if (!lower.startsWith('zh')) return value
   if (
     lower === 'zhtw' ||

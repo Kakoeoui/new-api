@@ -1,0 +1,72 @@
+name: new-api-customer
+
+services:
+  database:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: newapi_customer
+      POSTGRES_PASSWORD: ${CUSTOMER_DB_PASSWORD:?Missing private .env.customer - see docs/run.th.md}
+    volumes:
+      - customer-postgres:/var/lib/postgresql/data
+      - type: bind
+        source: ${CUSTOMER_SQL_FILE:-../private/shop/shop-linux-move.sql}
+        target: /restore/customer.sql
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./scripts/customer-init.sh
+        target: /docker-entrypoint-initdb.d/10-customer.sh
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -f /var/lib/postgresql/data/.customer-restore-complete && pg_isready -h 127.0.0.1 -U postgres -d newapi_customer
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
+    networks:
+      - database
+
+  app:
+    image: new-api:customer
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:18474:3000'
+    environment:
+      TZ: Asia/Bangkok
+      SQL_DSN: postgresql://postgres:${CUSTOMER_DB_PASSWORD:?Missing database password}@database:5432/newapi_customer?sslmode=disable
+      SESSION_SECRET: ${CUSTOMER_SESSION_SECRET:?Missing session secret}
+      CRYPTO_SECRET: ${CUSTOMER_CRYPTO_SECRET:?Missing crypto secret}
+    volumes:
+      - customer-app:/data
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3000/api/status']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - database
+      - default
+
+volumes:
+  customer-postgres:
+    name: new-api-customer-postgres
+  customer-app:
+    name: new-api-customer-app
+
+networks:
+  default: {}
+  database:
+    internal: true

@@ -1,0 +1,48 @@
+﻿/* RVL · cat-house details, with the original RVL artwork preserved. */
+:root {
+  --color-rvl-bg: #fff8f8;
+  --color-rvl-card: #ffffff;
+  --color-rvl-overlay: #ffffff;
+  --color-rvl-on-primary: #ffffff;
+  --color-rvl-shadow: #33202b14;
+  --color-rvl-hero-text: #fff0f3;
+  --color-rvl-hero-muted: #ead0d8;
+  --color-rvl-hero-accent: #ffadbd;
+  --color-rvl-hero-deep: #0d090a;
+  --color-rvl-hero-primary: #a92547;
+  --color-rvl-hero-hover: #c33255;
+  --color-rvl-hero-card: #21131b;
+  --color-rvl-hero-wash: #321c27;
+  --color-rvl-deep: #f6eaed;
+  --color-rvl-bd: #dfc4cc;
+  --color-rvl-red: #9b294c;
+  --color-rvl-hover: #7b1c39;
+  --color-rvl-accent: #922744;
+  --color-rvl-tx: #33202b;
+  --color-rvl-mu: #674b58;
+  --color-rvl-wash: #f6e8ed;
+  --color-rvl-hero-shade: #0d090ae8;
+  --color-rvl-hero-surround: #0b080b80;
+  --color-rvl-hero-clear: #0d090a00;
+  --color-rvl-notice-glow: transparent;
+  --font-rvl-body: 'Noto Sans Thai', 'Public Sans Variable', sans-serif;
+  --font-rvl-display: var(--font-body);
+  --font-rvl-brand: Georgia, 'Times New Roman', serif;
+  --space-rvl-section: clamp(32px, 5vw, 60px);
+  --ease-rvl-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-rvl-interaction: 180ms;
+}
+.dark {
+  --color-rvl-bg: #150f15;
+  --color-rvl-card: #211820;
+  --color-rvl-overlay: #291e27;
+  --color-rvl-shadow: #00000040;
+  --color-rvl-deep: #100b10;
+  --color-rvl-bd: #563540;
+  --color-rvl-red: #af3456;
+  --color-rvl-hover: #c04466;
+  --color-rvl-accent: #f4a8bc;
+  --color-rvl-tx: #fff0f3;
+  --color-rvl-mu: #dec3cd;
+  --color-rvl-wash: #32202b;
+}

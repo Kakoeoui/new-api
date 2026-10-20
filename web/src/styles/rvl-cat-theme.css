@@ -1,0 +1,148 @@
+@import '../../tokens.css';
+
+/* Reuse the default palette across the console, profile and model market.
+   Explicitly selected presets retain their own colors. */
+body:not([data-theme-preset]),
+body[data-theme-preset='default'] {
+  --background: var(--color-rvl-bg);
+  --foreground: var(--color-rvl-tx);
+  --card: var(--color-rvl-card);
+  --card-foreground: var(--color-rvl-tx);
+  --popover: var(--color-rvl-overlay);
+  --popover-foreground: var(--color-rvl-tx);
+  --primary: var(--color-rvl-red);
+  --primary-foreground: var(--color-rvl-on-primary);
+  --secondary: var(--color-rvl-wash);
+  --secondary-foreground: var(--color-rvl-tx);
+  --muted: var(--color-rvl-wash);
+  --muted-foreground: var(--color-rvl-mu);
+  --accent: var(--color-rvl-wash);
+  --accent-foreground: var(--color-rvl-tx);
+  --border: var(--color-rvl-bd);
+  --input: var(--color-rvl-bd);
+  --ring: var(--color-rvl-accent);
+  --sidebar: var(--color-rvl-card);
+  --sidebar-foreground: var(--color-rvl-tx);
+  --sidebar-primary: var(--color-rvl-red);
+  --sidebar-primary-foreground: var(--color-rvl-on-primary);
+  --sidebar-accent: var(--color-rvl-wash);
+  --sidebar-accent-foreground: var(--color-rvl-tx);
+  --sidebar-border: var(--color-rvl-bd);
+  --sidebar-ring: var(--color-rvl-accent);
+  --chart-1: var(--color-rvl-red);
+  --chart-2: #9472ad;
+  --chart-3: #bd7966;
+  --chart-4: #638e91;
+  --chart-5: #b18b4e;
+  --overview-accent-1: var(--color-rvl-red);
+  --overview-accent-2: #9472ad;
+  --overview-accent-3: #638e91;
+}
+
+/* Shared surfaces keep public pages, workspaces and authentication in the
+   same visual system, including portalled menus and dialogs. */
+body {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+html,
+body {
+  overflow-x: clip;
+}
+/* The wine fill stays on buttons; rose text stays readable on dark surfaces. */
+body:not([data-theme-preset]) :where(.text-primary),
+body[data-theme-preset='default'] :where(.text-primary) {
+  color: var(--color-rvl-accent);
+}
+body
+  :where([data-slot='popover-content'], [data-slot='dropdown-menu-content']) {
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px var(--color-rvl-shadow);
+}
+body :where([data-slot='dialog-content']) {
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px var(--color-rvl-shadow);
+}
+body :where(h1, h2, h3, [data-slot='card-title']) {
+  line-height: 1.5;
+}
+body :where([data-slot='card']) {
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--border) 40%, transparent);
+  --tw-ring-color: transparent;
+}
+body :where([data-slot='card-header']) {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding-bottom: 1rem;
+}
+body
+  :where(
+    [data-slot='input'],
+    [data-slot='textarea'],
+    [data-slot='select-trigger']
+  ) {
+  border-color: var(--border);
+  background: var(--card);
+}
+body
+  :where(
+    [data-slot='dropdown-menu-content'],
+    [data-slot='popover-content'],
+    [data-slot='dialog-content']
+  ) {
+  border-color: var(--border);
+  background: var(--popover);
+}
+.rvl-auth-layout {
+  background: var(--background);
+  color: var(--foreground);
+}
+.rvl-auth-panel {
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--primary);
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--border) 45%, transparent);
+}
+.rvl-page-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-block: 4px 20px;
+  color: var(--color-rvl-accent);
+}
+.rvl-page-mark::before,
+.rvl-page-mark::after {
+  content: '';
+  height: 1px;
+  width: 64px;
+  background: var(--border);
+}
+.rvl-workspace-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rvl-workspace-title > svg {
+  flex-shrink: 0;
+  color: var(--color-rvl-accent);
+}
+@media (max-width: 639px) {
+  body
+    :where(
+      [data-slot='input'],
+      [data-slot='textarea'],
+      [data-slot='native-select']
+    ) {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  body :where([data-slot='dialog-content']) {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+  .rvl-auth-panel {
+    margin-inline: 12px;
+  }
+}

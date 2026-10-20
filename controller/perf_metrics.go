@@ -25,6 +25,9 @@ func GetPerfMetricsSummary(c *gin.Context) {
 		common.ApiErrorStatus(c, http.StatusBadRequest, common.NewMessage("Invalid parameters"))
 		return
 	}
+	if proxyUpstreamPerf(c, true, hours) {
+		return
+	}
 	activeGroups := append(lo.Keys(ratio_setting.GetGroupRatioCopy()), "auto")
 	result, err := perfmetrics.QuerySummaryAll(hours, activeGroups, recentModels...)
 	if err != nil {
@@ -58,6 +61,9 @@ func GetPerfMetrics(c *gin.Context) {
 		}
 	}
 
+	if proxyUpstreamPerf(c, false, hours) {
+		return
+	}
 	result, err := perfmetrics.Query(perfmetrics.QueryParams{
 		Model:         modelName,
 		Group:         c.Query("group"),

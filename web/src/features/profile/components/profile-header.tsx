@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Activity, BarChart3, WalletCards } from 'lucide-react'
+import { Activity, BarChart3, PawPrint, WalletCards } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
@@ -117,7 +117,11 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
   return (
     <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
       <CardContent className='p-3 sm:p-5'>
-        <div className='flex items-center gap-3 text-left sm:gap-4'>
+        <div className='relative flex items-center gap-3 text-left sm:gap-4'>
+          <PawPrint
+            aria-hidden='true'
+            className='text-primary/20 pointer-events-none absolute right-0 bottom-0 size-8'
+          />
           <Avatar className='ring-background h-12 w-12 rounded-xl text-sm ring-2 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-lg sm:ring-4'>
             <AvatarFallback
               className='rounded-xl font-semibold text-white sm:rounded-2xl'
@@ -178,7 +182,7 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
               <div className='text-foreground mt-1.5 truncate font-mono text-lg font-bold tracking-tight tabular-nums sm:mt-2 sm:text-2xl'>
                 {item.value}
               </div>
-              <div className='text-muted-foreground/60 mt-1 hidden text-xs md:block'>
+              <div className='text-muted-foreground mt-1 hidden text-xs md:block'>
                 {item.description}
               </div>
             </div>

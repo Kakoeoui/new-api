@@ -24,6 +24,7 @@ import { PerformanceOverview } from '@/features/dashboard/components/models/perf
 import { PerformanceHealthPanel } from '@/features/dashboard/components/overview/performance-health-panel'
 import { ModelDetailsPerformance } from '@/features/pricing/components/model-details-performance'
 import { UptimeSparkline } from '@/features/pricing/components/model-details-uptime-sparkline'
+import { api } from '@/lib/api'
 
 const chart = vi.hoisted(() =>
   vi.fn(
@@ -84,9 +85,10 @@ const groups = [
   },
 ]
 
-function renderModelDetails() {
+function renderModelDetails(source?: 'upstream') {
   client.setQueryData(['perf-metrics', 'test-model'], {
     success: true,
+    source,
     data: {
       model_name: 'test-model',
       summary,
@@ -121,6 +123,32 @@ function renderModelDetails() {
 }
 
 describe('server performance summaries', () => {
+  it('labels upstream metrics separately from local traffic', () => {
+    renderModelDetails('upstream')
+    expect(screen.getByText('Upstream performance')).toBeVisible()
+    expect(screen.getByText('99.01%')).toBeVisible()
+  })
+
+  it('shows a retry action when the upstream is unavailable', async () => {
+    vi.spyOn(api, 'get').mockRejectedValue(new Error('Upstream unavailable'))
+    render(
+      <QueryClientProvider client={client}>
+        <ModelDetailsPerformance
+          model={{
+            id: 1,
+            model_name: 'test-model',
+            quota_type: 0,
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ['default'],
+          }}
+        />
+      </QueryClientProvider>
+    )
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeVisible()
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument()
+  })
+
   it.each([PerformanceHealthPanel, PerformanceOverview])(
     'uses the weighted server result across models',
     (Component) => {

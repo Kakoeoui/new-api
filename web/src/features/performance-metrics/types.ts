@@ -41,6 +41,7 @@ export type PerformanceGroup = {
 
 export type PerformanceMetricsData = {
   success: boolean
+  source?: 'upstream'
   message?: string
   data: {
     summary?: PerformanceSummary | null
@@ -66,6 +67,7 @@ export type PerfModelSummary = {
 
 export type PerfSummaryAllData = {
   success: boolean
+  source?: 'upstream'
   message?: string
   data: {
     summary?: PerformanceSummary | null
