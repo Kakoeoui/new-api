@@ -25,6 +25,7 @@ import {
   StaticDataTable,
   staticDataTableClassNames as tableStyles,
 } from '@/components/data-table'
+import { ErrorState } from '@/components/error-state'
 import { GroupBadge } from '@/components/group-badge'
 import { getPerfMetrics } from '@/features/performance-metrics/api'
 import {
@@ -128,6 +129,7 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
     queryFn: async () =>
       requireServerSuccess(await getPerfMetrics(props.model.model_name, 24)),
     staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
   })
   const groups = useMemo(
     () => metricsQuery.data?.data.groups ?? [],
@@ -159,6 +161,10 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
     return map
   }, [groups])
 
+  if (metricsQuery.isError) {
+    return <ErrorState onRetry={() => void metricsQuery.refetch()} />
+  }
+
   if (metricsQuery.isLoading || performances.length === 0) {
     return (
       <div className='text-muted-foreground rounded-lg border p-6 text-center text-sm'>
@@ -174,6 +180,11 @@ export function ModelDetailsPerformance(props: { model: PricingModel }) {
 
   return (
     <div className='flex flex-col gap-4'>
+      {metricsQuery.data?.source === 'upstream' && (
+        <p className='text-muted-foreground text-xs'>
+          {t('Upstream performance')}
+        </p>
+      )}
       <div className='grid grid-cols-1 gap-2 sm:grid-cols-3'>
         <StatCard
           icon={Timer}

@@ -22,6 +22,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 
 import { useStatus } from '@/hooks/use-status'
+import { useSystemConfig } from '@/hooks/use-system-config'
 import { api } from '@/lib/api'
 import {
   getModuleAccessForGuard,
@@ -31,6 +32,7 @@ import {
   STATUS_QUERY_KEY,
   ensureStatus,
   statusQueryOptions,
+  mapStatusDataToConfig,
 } from '@/lib/status-query'
 import { useSystemConfigStore } from '@/stores/system-config-store'
 
@@ -90,6 +92,43 @@ afterEach(() => {
 })
 
 describe('shared status query deduplication', () => {
+  test.each(['New API', 'NewAPI', 'new-api', ''])(
+    'maps stock branding %j to RVL instead of overwriting it',
+    (name) => {
+      expect(
+        mapStatusDataToConfig({ system_name: name, logo: '/logo.png' })
+      ).toMatchObject({
+        systemName: 'RVL Connect',
+        logo: '/rvl-logo.png',
+      })
+    }
+  )
+
+  test('keeps explicit admin branding', () => {
+    expect(
+      mapStatusDataToConfig({
+        system_name: 'Custom shop',
+        logo: 'https://example.com/custom.png',
+      })
+    ).toMatchObject({
+      systemName: 'Custom shop',
+      logo: 'https://example.com/custom.png',
+    })
+  })
+
+  test('replaces legacy browser-cached branding before a status refresh', () => {
+    useSystemConfigStore
+      .getState()
+      .setConfig({ systemName: 'New API', logo: '/logo.png' })
+    const queryClient = createQueryClient()
+    const hook = renderHook(() => useSystemConfig(), {
+      wrapper: wrapper(queryClient),
+    })
+    expect(hook.result.current.systemName).toBe('RVL Connect')
+    expect(hook.result.current.logo).toBe('/rvl-logo.png')
+    expect(statusRequests).toHaveLength(0)
+  })
+
   test.each(['cold', 'stale'] as const)(
     'deduplicates %s cache requests across guards and hook consumers',
     async (cacheState) => {

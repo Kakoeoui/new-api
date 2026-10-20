@@ -28,6 +28,7 @@ import type { SuccessRatePoint } from '@/features/performance-metrics/types'
 import { cn } from '@/lib/utils'
 
 export type ModelPerfBadgeData = {
+  source?: 'upstream'
   window_start?: number
   window_end?: number
   avg_latency_ms: number
@@ -79,6 +80,11 @@ export const ModelPerfBadge = memo(function ModelPerfBadge(
   return (
     <div
       aria-label={t('Performance metrics for the last 24 hours')}
+      title={
+        props.perf?.source === 'upstream'
+          ? t('Upstream performance')
+          : undefined
+      }
       className={cn(
         'flex w-full min-w-0 items-center justify-between gap-3',
         props.className
