@@ -86,24 +86,6 @@ export function RvlHome() {
             <PawPrint size={22} aria-hidden='true' />
           </div>
 
-          <div
-            className='notice'
-            role='note'
-            aria-label={t('About Gemini 4 Argon')}
-          >
-            <b>
-              <span className='notice-icon' aria-hidden='true'>
-                !
-              </span>
-              {t('Before using Gemini 4 Argon')}
-            </b>
-            <p>
-              {t(
-                'This model is not an official service. We do not guarantee its results or offer refunds or compensation for issues caused by its use. Please consider this before using it. You are responsible for your usage and its outcomes.'
-              )}
-            </p>
-          </div>
-
           <section className='section' aria-labelledby='rvl-video-title'>
             <div className='section-head'>
               <h2 id='rvl-video-title'>{t('How to buy and use (video)')}</h2>

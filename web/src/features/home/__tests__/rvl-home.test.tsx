@@ -92,9 +92,7 @@ test('the default homepage uses the supplied RVL content and working destination
   expect(screen.getAllByText('RVL Connect').length).toBeGreaterThan(0)
   expect(document.querySelector('.rvl-home-page')).not.toHaveClass('dark')
   expect(document.querySelector('.crest img')).toBeNull()
-  expect(
-    screen.getByRole('note', { name: 'About Gemini 4 Argon' })
-  ).toBeVisible()
+  expect(screen.queryByRole('note')).not.toBeInTheDocument()
   expect(
     screen.getByRole('link', { name: /Open status page/ })
   ).toHaveAttribute('rel', 'noopener noreferrer')

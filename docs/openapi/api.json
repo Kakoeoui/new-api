@@ -178,7 +178,7 @@
       "get": {
         "summary": "获取Uptime Kuma状态",
         "deprecated": false,
-        "description": "🔓 无需鉴权",
+        "description": "需要用户登录鉴权",
         "tags": [
           "系统"
         ],
@@ -328,7 +328,7 @@
       "get": {
         "summary": "获取定价信息",
         "deprecated": false,
-        "description": "🔓 无需鉴权（可选登录）",
+        "description": "需要用户登录鉴权",
         "tags": [
           "系统"
         ],
