@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type TFunction } from 'i18next'
+import type { TFunction } from 'i18next'
 
 import type { TokenUnit } from './types'
 
@@ -26,6 +26,8 @@ import type { TokenUnit } from './types'
 
 /** Sort options for pricing models */
 export const SORT_OPTIONS = {
+  PRICE_LOW: 'price-low',
+  PRICE_HIGH: 'price-high',
   NAME: 'name',
   INPUT_PRICE_LOW: 'input-price-low',
   INPUT_PRICE_HIGH: 'input-price-high',
@@ -37,15 +39,13 @@ export const SORT_OPTIONS = {
 
 export type SortOption = (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS]
 
-export function getSortLabels(t: TFunction): Record<SortOption, string> {
+export function getSortLabels(
+  t: TFunction
+): Partial<Record<SortOption, string>> {
   return {
     [SORT_OPTIONS.NAME]: t('Name'),
-    [SORT_OPTIONS.INPUT_PRICE_LOW]: t('Input Price: Low to High'),
-    [SORT_OPTIONS.INPUT_PRICE_HIGH]: t('Input Price: High to Low'),
-    [SORT_OPTIONS.OUTPUT_PRICE_LOW]: t('Output Price: Low to High'),
-    [SORT_OPTIONS.OUTPUT_PRICE_HIGH]: t('Output Price: High to Low'),
-    [SORT_OPTIONS.REQUEST_PRICE_LOW]: t('Per-request Price: Low to High'),
-    [SORT_OPTIONS.REQUEST_PRICE_HIGH]: t('Per-request Price: High to Low'),
+    [SORT_OPTIONS.PRICE_LOW]: t('Price: Low to High'),
+    [SORT_OPTIONS.PRICE_HIGH]: t('Price: High to Low'),
   }
 }
 
