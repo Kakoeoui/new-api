@@ -17,8 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Link } from '@tanstack/react-router'
+import { PawPrint } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { ThemeSwitch } from '@/components/theme-switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSystemConfig } from '@/hooks/use-system-config'
 
@@ -31,7 +33,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   const { systemName, logo, loading } = useSystemConfig()
 
   return (
-    <div className='relative grid h-svh max-w-none'>
+    <div className='rvl-auth-layout relative grid min-h-svh max-w-none'>
+      <div className='absolute top-4 right-4 z-10 sm:top-8 sm:right-8'>
+        <ThemeSwitch />
+      </div>
       <Link
         to='/'
         className='absolute top-4 left-4 z-10 flex items-center gap-2 transition-opacity hover:opacity-80 sm:top-8 sm:left-8'
@@ -54,7 +59,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         )}
       </Link>
       <div className='container flex items-center pt-16 sm:pt-0'>
-        <div className='mx-auto flex w-full flex-col justify-center space-y-2 px-4 py-8 sm:w-[480px] sm:p-8'>
+        <div className='rvl-auth-panel mx-auto flex w-full flex-col justify-center space-y-2 px-4 py-8 sm:w-[480px] sm:p-8'>
+          <div className='rvl-page-mark' aria-hidden='true'>
+            <PawPrint size={24} />
+          </div>
           {children}
         </div>
       </div>

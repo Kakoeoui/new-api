@@ -72,3 +72,14 @@ test('keeps French on the French calendar locale', async () => {
   render(<DatePicker selected={selected} onSelect={() => undefined} />)
   expect(await openCalendar()).toHaveTextContent('fr')
 })
+
+test('uses Thai in both calendars after switching language', async () => {
+  await setInterfaceLanguage('th')
+  const picker = render(
+    <DatePicker selected={selected} onSelect={() => undefined} />
+  )
+  expect(await openCalendar()).toHaveTextContent('th')
+  picker.unmount()
+  render(<DateTimePicker value={selected} onChange={() => undefined} />)
+  expect(await openCalendar()).toHaveTextContent('th')
+})

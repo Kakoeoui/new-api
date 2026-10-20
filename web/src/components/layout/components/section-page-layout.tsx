@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { PawPrint } from 'lucide-react'
 import {
   Children,
   isValidElement,
@@ -93,9 +94,12 @@ export function SectionPageLayout(props: SectionPageLayoutProps) {
                   : 'min-w-0 flex-1'
               }
             >
-              <h2 className='truncate text-base font-bold tracking-tight sm:text-lg'>
-                {title}
-              </h2>
+              <div className='rvl-workspace-title'>
+                <PawPrint size={20} aria-hidden='true' />
+                <h2 className='truncate text-base font-bold tracking-tight sm:text-lg'>
+                  {title}
+                </h2>
+              </div>
             </div>
             {actions != null && (
               <div className='flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-x-4'>

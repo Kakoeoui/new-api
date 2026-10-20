@@ -623,7 +623,7 @@ For commercial licensing, please contact support@quantumnous.com
   --font-body: var(--font-ui-sans);
 }
 [data-theme-font='sans'] {
-  --font-ui-sans: var(--font-public-sans);
+  --font-ui-sans: var(--font-rvl-body);
   --font-body: var(--font-ui-sans);
 }
 [data-theme-font='serif'] {

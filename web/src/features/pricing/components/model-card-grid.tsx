@@ -61,6 +61,7 @@ export const ModelCardGrid = memo(function ModelCardGrid(
       requireServerSuccess(await getPerfMetricsSummary(24, recentModels)),
     enabled: recentModels.length > 0,
     staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
     retry: false,
   })
 
@@ -71,6 +72,7 @@ export const ModelCardGrid = memo(function ModelCardGrid(
         ...model,
         window_start: perfQuery.data?.data.window_start,
         window_end: perfQuery.data?.data.window_end,
+        source: perfQuery.data?.source,
       })
     }
     for (const [name, series] of Object.entries(
@@ -81,6 +83,7 @@ export const ModelCardGrid = memo(function ModelCardGrid(
         avg_tps: Number.NaN,
         success_rate: Number.NaN,
         ...map.get(name),
+        source: perfQuery.data?.source,
         recent_success_series: series,
       })
     }
