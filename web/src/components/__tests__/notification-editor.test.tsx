@@ -143,3 +143,36 @@ test('failed save retains the editable draft', async () => {
   )
   expect(screen.getByDisplayValue('Existing notice')).toBeVisible()
 })
+
+test('adds a timeline entry when crypto.randomUUID is unavailable', async () => {
+  Object.defineProperty(globalThis.crypto, 'randomUUID', {
+    configurable: true,
+    value: undefined,
+  })
+  render(
+    <QueryClientProvider client={client}>
+      <NotificationEditor open onOpenChange={vi.fn()} />
+    </QueryClientProvider>
+  )
+  await screen.findByDisplayValue('Existing notice')
+  fireEvent.click(screen.getByRole('button', { name: 'Add timeline entry' }))
+  expect(screen.getAllByLabelText('Content')).toHaveLength(2)
+})
+
+test('omits an empty new timeline entry from the save payload', async () => {
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  render(
+    <QueryClientProvider client={client}>
+      <NotificationEditor open onOpenChange={vi.fn()} />
+    </QueryClientProvider>
+  )
+  await screen.findByDisplayValue('Existing notice')
+  fireEvent.click(screen.getByRole('button', { name: 'Add timeline entry' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(put).toHaveBeenCalledOnce())
+  expect(put.mock.calls[0][1]).toMatchObject({
+    announcements: [content.announcements[0]],
+  })
+})

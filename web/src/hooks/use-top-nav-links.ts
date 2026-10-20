@@ -37,8 +37,8 @@ export type TopNavLink = {
  * {
  *   home: true,
  *   console: true,
- *   pricing: { enabled: true, requireAuth: false },
- *   rankings: { enabled: true, requireAuth: false },
+ *   pricing: { enabled: true, requireAuth: true },
+ *   rankings: { enabled: true, requireAuth: true },
  *   docs: true,
  *   about: true
  * }
