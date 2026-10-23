@@ -113,11 +113,13 @@ export function filterByEndpointType(
   )
 }
 
-type SortPriceKind = 'input' | 'output' | 'request'
+type SortPriceKind = 'price' | 'input' | 'output' | 'request'
 
 const PRICE_SORTS: Partial<
   Record<SortOption, { kind: SortPriceKind; dir: 1 | -1 }>
 > = {
+  [SORT_OPTIONS.PRICE_LOW]: { kind: 'price', dir: 1 },
+  [SORT_OPTIONS.PRICE_HIGH]: { kind: 'price', dir: -1 },
   [SORT_OPTIONS.INPUT_PRICE_LOW]: { kind: 'input', dir: 1 },
   [SORT_OPTIONS.INPUT_PRICE_HIGH]: { kind: 'input', dir: -1 },
   [SORT_OPTIONS.OUTPUT_PRICE_LOW]: { kind: 'output', dir: 1 },
@@ -135,6 +137,9 @@ function getSortPrice(
   model: PricingModel,
   kind: SortPriceKind
 ): number | undefined {
+  if (kind === 'price') {
+    return getSortPrice(model, 'input') ?? getSortPrice(model, 'request')
+  }
   if (kind === 'request') {
     const example = getCardExamplePrice(model, { tokenUnit: 'M' })
     if (example) return example.total
@@ -250,7 +255,7 @@ export function extractAllTags(models: PricingModel[]): string[] {
     }
   })
 
-  return Array.from(tagSet).sort((a, b) => a.localeCompare(b))
+  return [...tagSet].sort((a, b) => a.localeCompare(b))
 }
 
 /**
