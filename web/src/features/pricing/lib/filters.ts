@@ -38,6 +38,31 @@ import { calculateTokenPrice } from './price'
 // Filter Utilities
 // ----------------------------------------------------------------------------
 
+const MODEL_HOUSE_REGEX = /^\[([^\]]+)\]-/
+
+/**
+ * Extract house code from model name prefix e.g. "[DM]-..." -> "DM"
+ */
+export function extractModelHouse(model: PricingModel): string | null {
+  if (!model.model_name) return null
+  const match = model.model_name.match(MODEL_HOUSE_REGEX)
+  if (!match || !match[1]) return null
+  const house = match[1].trim().toUpperCase()
+  return house || null
+}
+
+/**
+ * Filter models by house prefix
+ */
+export function filterByHouse(
+  models: PricingModel[],
+  house: string
+): PricingModel[] {
+  if (!house || house === FILTER_ALL) return models
+  const targetHouse = house.toUpperCase()
+  return models.filter((m) => extractModelHouse(m) === targetHouse)
+}
+
 /**
  * Filter models by search query
  */
@@ -205,6 +230,7 @@ export function filterAndSortModels(
   models: PricingModel[],
   filters: {
     search: string
+    house?: string
     vendor: string
     group: string
     quotaType: string
@@ -214,6 +240,7 @@ export function filterAndSortModels(
   }
 ): PricingModel[] {
   let result = filterBySearch(models, filters.search)
+  result = filterByHouse(result, filters.house || FILTER_ALL)
   result = filterByVendor(result, filters.vendor)
   result = filterByGroup(result, filters.group)
   result = filterByQuotaType(result, filters.quotaType)

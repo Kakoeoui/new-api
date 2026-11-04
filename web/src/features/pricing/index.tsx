@@ -58,6 +58,7 @@ export function Pricing() {
   const {
     searchInput,
     sortBy,
+    houseFilter,
     vendorFilter,
     groupFilter,
     quotaTypeFilter,
@@ -68,6 +69,7 @@ export function Pricing() {
     showRechargePrice,
     setSearchInput,
     setSortBy,
+    setHouseFilter,
     setVendorFilter,
     setGroupFilter,
     setQuotaTypeFilter,
@@ -193,11 +195,13 @@ export function Pricing() {
 
           <div className='grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]'>
             <PricingSidebar
+              houseFilter={houseFilter}
               quotaTypeFilter={quotaTypeFilter}
               endpointTypeFilter={endpointTypeFilter}
               vendorFilter={vendorFilter}
               groupFilter={groupFilter}
               tagFilter={tagFilter}
+              onHouseChange={setHouseFilter}
               onQuotaTypeChange={setQuotaTypeFilter}
               onEndpointTypeChange={setEndpointTypeFilter}
               onVendorChange={setVendorFilter}
@@ -225,11 +229,13 @@ export function Pricing() {
                 onRechargePriceChange={setShowRechargePrice}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
+                houseFilter={houseFilter}
                 quotaTypeFilter={quotaTypeFilter}
                 endpointTypeFilter={endpointTypeFilter}
                 vendorFilter={vendorFilter}
                 groupFilter={groupFilter}
                 tagFilter={tagFilter}
+                onHouseChange={setHouseFilter}
                 onQuotaTypeChange={setQuotaTypeFilter}
                 onEndpointTypeChange={setEndpointTypeFilter}
                 onVendorChange={setVendorFilter}
