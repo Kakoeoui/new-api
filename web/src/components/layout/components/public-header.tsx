@@ -291,13 +291,6 @@ export function PublicHeader(props: PublicHeaderProps) {
 
               {showLanguageSwitcher && <LanguageSwitcher />}
               {showThemeSwitch && <ThemeSwitch />}
-
-              {showAuthButtons && (
-                <>
-                  <div className='bg-border/40 mx-1 h-4 w-px' />
-                  {authContent}
-                </>
-              )}
             </div>
 
             {showNotifications && (
@@ -311,6 +304,12 @@ export function PublicHeader(props: PublicHeaderProps) {
                 announcements={notifications.announcements}
                 loading={notifications.loading}
               />
+            )}
+
+            {showAuthButtons && (
+              <div className='hidden shrink-0 items-center lg:flex'>
+                {authContent}
+              </div>
             )}
 
             {/* Mobile: compact actions + hamburger */}
