@@ -212,4 +212,52 @@ describe('pricing controls', () => {
     await user.keyboard('{Escape}')
     expect(await screen.findByRole('button', { name: /Filter/ })).toHaveFocus()
   })
+
+  it('counts models per house prefix and filters by selected house', async () => {
+    const props = toolbarProps()
+    const onHouseChange = vi.fn()
+    const user = userEvent.setup()
+    const models: PricingModel[] = [
+      {
+        id: 1,
+        model_name: '[DM]-[AG]-[5]-gemini-4-argon-[2.5]',
+        quota_type: 1,
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ['default'],
+      },
+      {
+        id: 2,
+        model_name: '[DM]-[ย้อนทางการ]-gemini-4-argon-[0.52]',
+        quota_type: 1,
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ['default'],
+      },
+      {
+        id: 3,
+        model_name: '[MOON]-[เดอะฟูล]-gemini-4-argon-[2.36]',
+        quota_type: 1,
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ['default'],
+      },
+    ]
+
+    render(
+      <PricingSidebar
+        {...props}
+        houseFilter='all'
+        onHouseChange={onHouseChange}
+        models={models}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: /^All Houses\s*3$/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^DM\s*2$/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^MOON\s*1$/ })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: /^MOON\s*1$/ }))
+    expect(onHouseChange).toHaveBeenCalledWith('MOON')
+  })
 })

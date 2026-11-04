@@ -36,6 +36,7 @@ import type { PricingModel, TokenUnit } from '../types'
 type FilterState = {
   search?: string
   sort?: string
+  house?: string
   vendor?: string
   group?: string
   quotaType?: string
@@ -58,6 +59,7 @@ export function useFilters(models: PricingModel[]) {
   const [filterState, setFilterState] = useState<FilterState>(() => ({
     search: search.search,
     sort: search.sort,
+    house: (search as Record<string, unknown>).house as string | undefined,
     vendor: search.vendor,
     group: search.group,
     quotaType: search.quotaType,
@@ -104,6 +106,10 @@ export function useFilters(models: PricingModel[]) {
   const setSortBy = useCallback(
     (v: string) =>
       updateFilters({ sort: v === SORT_OPTIONS.NAME ? undefined : v }),
+    [updateFilters]
+  )
+  const setHouseFilter = useCallback(
+    (v: string) => updateFilters({ house: v === FILTER_ALL ? undefined : v }),
     [updateFilters]
   )
   const setVendorFilter = useCallback(
@@ -155,6 +161,7 @@ export function useFilters(models: PricingModel[]) {
 
     return filterAndSortModels(models, {
       search: debouncedSearchInput,
+      house: houseFilter,
       vendor: vendorFilter,
       group: groupFilter,
       quotaType: quotaTypeFilter,
@@ -165,6 +172,7 @@ export function useFilters(models: PricingModel[]) {
   }, [
     models,
     debouncedSearchInput,
+    houseFilter,
     vendorFilter,
     groupFilter,
     quotaTypeFilter,
@@ -175,26 +183,43 @@ export function useFilters(models: PricingModel[]) {
 
   const hasActiveFilters = useMemo(
     () =>
+      houseFilter !== FILTER_ALL ||
       vendorFilter !== FILTER_ALL ||
       groupFilter !== FILTER_ALL ||
       quotaTypeFilter !== QUOTA_TYPES.ALL ||
       endpointTypeFilter !== ENDPOINT_TYPES.ALL ||
       tagFilter !== FILTER_ALL,
-    [vendorFilter, groupFilter, quotaTypeFilter, endpointTypeFilter, tagFilter]
+    [
+      houseFilter,
+      vendorFilter,
+      groupFilter,
+      quotaTypeFilter,
+      endpointTypeFilter,
+      tagFilter,
+    ]
   )
 
   const activeFilterCount = useMemo(
     () =>
+      (houseFilter !== FILTER_ALL ? 1 : 0) +
       (vendorFilter !== FILTER_ALL ? 1 : 0) +
       (groupFilter !== FILTER_ALL ? 1 : 0) +
       (quotaTypeFilter !== QUOTA_TYPES.ALL ? 1 : 0) +
       (endpointTypeFilter !== ENDPOINT_TYPES.ALL ? 1 : 0) +
       (tagFilter !== FILTER_ALL ? 1 : 0),
-    [vendorFilter, groupFilter, quotaTypeFilter, endpointTypeFilter, tagFilter]
+    [
+      houseFilter,
+      vendorFilter,
+      groupFilter,
+      quotaTypeFilter,
+      endpointTypeFilter,
+      tagFilter,
+    ]
   )
 
   const clearFilters = useCallback(() => {
     updateFilters({
+      house: undefined,
       vendor: undefined,
       group: undefined,
       quotaType: undefined,
@@ -210,6 +235,7 @@ export function useFilters(models: PricingModel[]) {
   return {
     searchInput,
     sortBy,
+    houseFilter,
     vendorFilter,
     groupFilter,
     quotaTypeFilter,
@@ -220,6 +246,7 @@ export function useFilters(models: PricingModel[]) {
     showRechargePrice,
     setSearchInput,
     setSortBy,
+    setHouseFilter,
     setVendorFilter,
     setGroupFilter,
     setQuotaTypeFilter,

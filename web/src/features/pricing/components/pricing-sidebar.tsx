@@ -38,7 +38,7 @@ import {
   getQuotaTypeLabels,
 } from '../constants'
 import { hasTaskUsageSchema } from '../lib/dynamic-price'
-import { parseTags } from '../lib/filters'
+import { extractModelHouse, parseTags } from '../lib/filters'
 import type { PricingModel, PricingVendor } from '../types'
 
 type FilterOption = {
@@ -57,11 +57,13 @@ type FilterSectionProps = {
 }
 
 export interface PricingSidebarProps {
+  houseFilter?: string
   quotaTypeFilter: string
   endpointTypeFilter: string
   vendorFilter: string
   groupFilter: string
   tagFilter: string
+  onHouseChange?: (value: string) => void
   onQuotaTypeChange: (value: string) => void
   onEndpointTypeChange: (value: string) => void
   onVendorChange: (value: string) => void
@@ -153,11 +155,16 @@ export const PricingSidebar = memo(function PricingSidebar(
 ) {
   const { t } = useTranslation()
   const counts = useMemo(() => {
+    const houses = new Map<string, number>()
     const vendors = new Map<string, number>()
     const tags = new Map<string, number>()
     const endpoints = new Map<string, number>()
     const quotas = { token: 0, request: 0, task: 0 }
     for (const model of props.models) {
+      const house = extractModelHouse(model)
+      if (house) {
+        houses.set(house, (houses.get(house) ?? 0) + 1)
+      }
       if (model.vendor_name) {
         vendors.set(
           model.vendor_name,
@@ -180,10 +187,25 @@ export const PricingSidebar = memo(function PricingSidebar(
         quotas.request++
       }
     }
-    return { vendors, tags, endpoints, quotas }
+    return { houses, vendors, tags, endpoints, quotas }
   }, [props.models])
   const quotaTypeLabels = getQuotaTypeLabels(t)
   const endpointTypeLabels = getEndpointTypeLabels(t)
+
+  const houseOptions: FilterOption[] = [
+    {
+      value: FILTER_ALL,
+      label: t('All Houses'),
+      count: props.models.length,
+    },
+    ...Array.from(counts.houses.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([house, count]) => ({
+        value: house,
+        label: house,
+        count,
+      })),
+  ]
 
   const vendorOptions: FilterOption[] = [
     {
@@ -294,10 +316,10 @@ export const PricingSidebar = memo(function PricingSidebar(
 
       <div className='space-y-1'>
         <FilterSection
-          title={t('Groups')}
-          value={props.groupFilter}
-          options={groupOptions}
-          onChange={props.onGroupChange}
+          title={t('All Houses')}
+          value={props.houseFilter ?? FILTER_ALL}
+          options={houseOptions}
+          onChange={(v) => props.onHouseChange?.(v)}
         />
         <FilterSection
           title={t('All Vendors')}
@@ -322,6 +344,12 @@ export const PricingSidebar = memo(function PricingSidebar(
           value={props.endpointTypeFilter}
           options={endpointOptions}
           onChange={props.onEndpointTypeChange}
+        />
+        <FilterSection
+          title={t('Groups')}
+          value={props.groupFilter}
+          options={groupOptions}
+          onChange={props.onGroupChange}
         />
       </div>
     </aside>
