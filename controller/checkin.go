@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -19,6 +20,12 @@ func GetCheckinStatus(c *gin.Context) {
 		return
 	}
 	userId := c.GetInt("id")
+	discordLinked, err := model.IsUserDiscordLinked(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
 	// 获取月份参数，默认为当前月份
 	month := c.DefaultQuery("month", time.Now().Format("2006-01"))
 
@@ -31,10 +38,12 @@ func GetCheckinStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"enabled":   setting.Enabled,
-			"min_quota": setting.MinQuota,
-			"max_quota": setting.MaxQuota,
-			"stats":     stats,
+			"enabled":         setting.Enabled,
+			"min_quota":       setting.MinQuota,
+			"max_quota":       setting.MaxQuota,
+			"discord_linked":  discordLinked,
+			"require_discord": true,
+			"stats":           stats,
 		},
 	})
 }
@@ -48,6 +57,15 @@ func DoCheckin(c *gin.Context) {
 	}
 
 	userId := c.GetInt("id")
+	discordLinked, err := model.IsUserDiscordLinked(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if !discordLinked {
+		common.ApiError(c, errors.New("ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้"))
+		return
+	}
 
 	checkin, err := model.UserCheckin(userId)
 	if err != nil {

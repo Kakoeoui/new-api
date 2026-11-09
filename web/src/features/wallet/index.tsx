@@ -31,6 +31,7 @@ import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialo
 import { TransferDialog } from './components/dialogs/transfer-dialog'
 import { RechargeFormCard } from './components/recharge-form-card'
 import { SubscriptionPlansCard } from './components/subscription-plans-card'
+import { CheckinCalendarCard } from '@/features/profile/components/checkin-calendar-card'
 import { WalletStatsCard } from './components/wallet-stats-card'
 import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from './constants'
 import {
@@ -289,6 +290,11 @@ export function Wallet(props: WalletProps) {
         <SectionPageLayout.Content>
           <div className='mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5'>
             <WalletStatsCard user={user} loading={userLoading} />
+            <CheckinCalendarCard
+              checkinEnabled={status?.checkin_enabled !== false}
+              turnstileEnabled={Boolean(status?.turnstile_check && status?.turnstile_site_key)}
+              turnstileSiteKey={(status?.turnstile_site_key as string) || ''}
+            />
 
             <div
               className={

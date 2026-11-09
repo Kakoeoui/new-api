@@ -9,7 +9,9 @@ type DiscordSettings struct {
 }
 
 // 默认配置
-var defaultDiscordSettings = DiscordSettings{}
+var defaultDiscordSettings = DiscordSettings{
+	Enabled: true,
+}
 
 func init() {
 	// 注册到全局配置管理器

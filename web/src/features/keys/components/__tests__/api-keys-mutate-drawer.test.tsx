@@ -203,11 +203,20 @@ afterEach(() => {
   }
 })
 
+async function openAdvancedSettings(): Promise<void> {
+  fireEvent.click(findButton('Advanced Settings', true))
+  await screen.findByText(
+    'If these advanced settings are configured incorrectly, the administrator will not be able to fix them for you.'
+  )
+  fireEvent.click(findButton('OK', true))
+}
+
 describe('API keys mutate drawer Auto group integration', () => {
   test('inherits the root Auto order and sends an empty override for every batch-created key', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
     await renderCreateDrawer()
+    await openAdvancedSettings()
 
     const groupTrigger = getControlByLabel('Group')
     expect(groupTrigger.textContent?.includes('auto')).toBe(true)
@@ -241,6 +250,7 @@ describe('API keys mutate drawer Auto group integration', () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
     await renderCreateDrawer()
+    await openAdvancedSettings()
 
     const autoOrderControl = getControlByLabel('Auto group order')
     const addGroupTrigger = autoOrderControl.querySelector<HTMLButtonElement>(
@@ -286,6 +296,10 @@ describe('API keys mutate drawer user quota query switch', () => {
     await renderCreateDrawer()
 
     fireEvent.click(findButton('Advanced Settings', true))
+    await screen.findByText('If these advanced settings are configured incorrectly, the administrator will not be able to fix them for you.')
+    fireEvent.click(findButton('Exit', true))
+    expect(screen.queryByRole('switch', { name: 'Allow querying user quota' })).toBeNull()
+    await openAdvancedSettings()
     const quotaQuerySwitch = await screen.findByRole('switch', {
       name: 'Allow querying user quota',
     })

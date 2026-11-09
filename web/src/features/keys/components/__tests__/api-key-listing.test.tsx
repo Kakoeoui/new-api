@@ -389,36 +389,19 @@ it('restores dates hidden by the old default and preserves unrelated column pref
 })
 
 it.each([
-  [1, 'Disable', 2, 'Disabled'],
-  [2, 'Enable', 1, 'Enabled'],
+  [1, 'Enabled'],
+  [2, 'Disabled'],
+  [3, 'Expired'],
 ])(
-  'keeps status %s toggling at its original row button without fetching a full key',
-  async (status, action, nextStatus, nextLabel) => {
-    const { post, put } = await renderKeysPage(status)
-    const user = userEvent.setup()
-    const button = screen.getByRole('button', { name: action })
-    act(() => button.focus())
-    await user.keyboard('{Enter}')
-    await waitFor(() =>
-      expect(put).toHaveBeenCalledWith('/api/token/?status_only=true', {
-        id: 7,
-        status: nextStatus,
-      })
-    )
-    await screen.findByText(nextLabel)
-    expect(post).not.toHaveBeenCalled()
+  'omits inline Disable/Enable button from row actions for status %s (moved to Advanced Settings)',
+  async (status, expectedBadge) => {
+    await renderKeysPage(status)
+    expect(screen.getByText(expectedBadge)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Disable' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Enable' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
   }
 )
-
-it('keeps expired status when the server refuses reactivation', async () => {
-  const { put, post } = await renderKeysPage(3)
-  put.mockResolvedValue({ data: { success: false, message: 'Token expired' } })
-  await userEvent.click(screen.getByRole('button', { name: 'Enable' }))
-  await screen.findByText('Token expired')
-  expect(screen.getByText('Expired')).toBeInTheDocument()
-  expect(screen.queryByText('Enabled')).not.toBeInTheDocument()
-  expect(post).not.toHaveBeenCalled()
-})
 
 it.each([true, false])(
   'fetches a full key only on explicit copy and honors permission success=%s',

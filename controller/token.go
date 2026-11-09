@@ -435,12 +435,22 @@ func UpdateToken(c *gin.Context) {
 	}
 	params["name"] = cleanToken.Name
 	previous := *cleanToken
+
+	effectiveExpiredTime := cleanToken.ExpiredTime
+	effectiveRemainQuota := cleanToken.RemainQuota
+	effectiveUnlimitedQuota := cleanToken.UnlimitedQuota
+	if statusOnly == "" {
+		effectiveExpiredTime = token.ExpiredTime
+		effectiveRemainQuota = token.RemainQuota
+		effectiveUnlimitedQuota = token.UnlimitedQuota
+	}
+
 	if token.Status == common.TokenStatusEnabled {
-		if cleanToken.Status == common.TokenStatusExpired && cleanToken.ExpiredTime <= common.GetTimestamp() && cleanToken.ExpiredTime != -1 {
+		if cleanToken.Status == common.TokenStatusExpired && effectiveExpiredTime <= common.GetTimestamp() && effectiveExpiredTime != -1 {
 			common.ApiErrorT(c, "Token has expired and cannot be enabled. Please modify the expiration time or set it to never expire")
 			return
 		}
-		if cleanToken.Status == common.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
+		if cleanToken.Status == common.TokenStatusExhausted && effectiveRemainQuota <= 0 && !effectiveUnlimitedQuota {
 			common.ApiErrorT(c, "Token quota is exhausted and cannot be enabled. Please modify the remaining quota or set it to unlimited")
 			return
 		}
@@ -449,6 +459,9 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.Status = token.Status
 	} else {
 		// If you add more fields, please also update token.Update()
+		if token.Status == common.TokenStatusEnabled || token.Status == common.TokenStatusDisabled {
+			cleanToken.Status = token.Status
+		}
 		cleanToken.Name = token.Name
 		cleanToken.ExpiredTime = token.ExpiredTime
 		cleanToken.RemainQuota = token.RemainQuota
@@ -485,6 +498,7 @@ func UpdateToken(c *gin.Context) {
 			changed bool
 		}{
 			{"name", previous.Name != cleanToken.Name},
+			{"status", previous.Status != cleanToken.Status},
 			{"expired_time", previous.ExpiredTime != cleanToken.ExpiredTime},
 			{"remain_quota", previous.RemainQuota != cleanToken.RemainQuota},
 			{"unlimited_quota", previous.UnlimitedQuota != cleanToken.UnlimitedQuota},
