@@ -9,11 +9,11 @@ type CheckinSetting struct {
 	MaxQuota int  `json:"max_quota"` // 签到最大额度奖励
 }
 
-// 默认配置
+// 默认配置 (500000 quota = 1.00 บาท -> 25000 = 0.05 บาท, 500000 = 1.00 บาท)
 var checkinSetting = CheckinSetting{
-	Enabled:  false, // 默认关闭
-	MinQuota: 1000,  // 默认最小额度 1000 (约 0.002 USD)
-	MaxQuota: 10000, // 默认最大额度 10000 (约 0.02 USD)
+	Enabled:  true,
+	MinQuota: 25000,
+	MaxQuota: 500000,
 }
 
 func init() {

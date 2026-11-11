@@ -64,9 +64,9 @@ var OptionMapRWMutex sync.RWMutex
 var ItemsPerPage = 10
 var MaxRecentItems = 1000
 
-var PasswordLoginEnabled = true
+var PasswordLoginEnabled = false
 var PasswordLoginEncryptionEnabled = false
-var PasswordRegisterEnabled = true
+var PasswordRegisterEnabled = false
 var EmailVerificationEnabled = false
 var GitHubOAuthEnabled = false
 var LinuxDOOAuthEnabled = false

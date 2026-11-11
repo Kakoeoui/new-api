@@ -20,15 +20,12 @@ import type { Row } from '@tanstack/react-table'
 import {
   Trash2,
   Edit,
-  Power,
-  PowerOff,
   ExternalLink,
   ArrowRightLeft,
   Copy,
   Link,
-  Loader2,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -52,10 +49,7 @@ import { resolveChatUrl, type ChatPreset } from '@/features/chat/lib/chat-links'
 import { sendToFluent } from '@/features/chat/lib/send-to-fluent'
 import { encodeChannelConnectionInfo } from '@/lib/channel-connection-info'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
-import { handleServerError } from '@/lib/handle-server-error'
 
-import { updateApiKeyStatus } from '../api'
-import { API_KEY_STATUS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import { apiKeySchema } from '../types'
 import { useApiKeys } from './api-keys-provider'
 
@@ -84,18 +78,14 @@ export function DataTableRowActions<TData>({
   const {
     setOpen,
     setCurrentRow,
-    triggerRefresh,
     setResolvedKey,
     resolveRealKey,
     loadingKeys,
   } = useApiKeys()
-  const isEnabled = apiKey.status === API_KEY_STATUS.ENABLED
   const { chatPresets, serverAddress } = useChatPresets()
-  const [isTogglingStatus, setIsTogglingStatus] = useState(false)
   const isRealKeyLoading = Boolean(loadingKeys[apiKey.id])
 
   const hasChatPresets = chatPresets.length > 0
-  const toggleLabel = isEnabled ? t('Disable') : t('Enable')
 
   const handleOpenChatPreset = useCallback(
     async (preset: ChatPreset) => {
@@ -138,64 +128,8 @@ export function DataTableRowActions<TData>({
     [resolveRealKey, apiKey.id, serverAddress, t]
   )
 
-  const handleToggleStatus = async (
-    event?: React.MouseEvent<HTMLButtonElement>
-  ) => {
-    event?.stopPropagation()
-    const newStatus = isEnabled
-      ? API_KEY_STATUS.DISABLED
-      : API_KEY_STATUS.ENABLED
-
-    setIsTogglingStatus(true)
-    try {
-      const result = await updateApiKeyStatus(apiKey.id, newStatus)
-      if (result.success) {
-        const message = isEnabled
-          ? t(SUCCESS_MESSAGES.API_KEY_DISABLED)
-          : t(SUCCESS_MESSAGES.API_KEY_ENABLED)
-        toast.success(message)
-        triggerRefresh()
-      } else {
-        handleServerError(result, t(ERROR_MESSAGES.STATUS_UPDATE_FAILED))
-      }
-    } catch (error) {
-      handleServerError(error, t(ERROR_MESSAGES.UNEXPECTED))
-    } finally {
-      setIsTogglingStatus(false)
-    }
-  }
-
-  let statusIcon = <Power className='size-4' />
-  if (isTogglingStatus) {
-    statusIcon = <Loader2 className='size-4 animate-spin' />
-  } else if (isEnabled) {
-    statusIcon = <PowerOff className='size-4' />
-  }
-
   return (
     <div className='-ml-1.5 flex items-center gap-1'>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              onClick={handleToggleStatus}
-              disabled={isTogglingStatus}
-              aria-label={toggleLabel}
-              className={
-                isEnabled
-                  ? 'text-destructive hover:text-destructive'
-                  : 'text-emerald-600 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-400'
-              }
-            />
-          }
-        >
-          {statusIcon}
-        </TooltipTrigger>
-        <TooltipContent>{toggleLabel}</TooltipContent>
-      </Tooltip>
-
       <Tooltip>
         <TooltipTrigger
           render={

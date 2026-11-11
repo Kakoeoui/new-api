@@ -1,13 +1,17 @@
 package model
 
 import (
+	"errors"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"gorm.io/gorm"
 )
+
+var errCheckinRequiresDiscord = errors.New("ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้")
 
 // Checkin 签到记录
 type Checkin struct {
@@ -26,6 +30,18 @@ type CheckinRecord struct {
 
 func (Checkin) TableName() string {
 	return "checkins"
+}
+
+// IsUserDiscordLinked ตรวจสอบว่าผู้ใช้ผูกบัญชี Discord ไว้หรือไม่
+func IsUserDiscordLinked(userId int) (bool, error) {
+	if userId <= 0 {
+		return false, nil
+	}
+	var user User
+	if err := DB.Select("id", "discord_id").First(&user, userId).Error; err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(user.DiscordId) != "", nil
 }
 
 // GetUserCheckinRecords 获取用户在指定日期范围内的签到记录
@@ -55,6 +71,14 @@ func UserCheckin(userId int) (*Checkin, error) {
 	setting := operation_setting.GetCheckinSetting()
 	if !setting.Enabled {
 		return nil, common.NewMessage("Check-in feature is not enabled")
+	}
+
+	discordLinked, err := IsUserDiscordLinked(userId)
+	if err != nil {
+		return nil, err
+	}
+	if !discordLinked {
+		return nil, errCheckinRequiresDiscord
 	}
 
 	// 检查今天是否已签到
@@ -93,6 +117,14 @@ func UserCheckin(userId int) (*Checkin, error) {
 // userCheckinWithTransaction 使用事务执行签到（适用于 MySQL 和 PostgreSQL）
 func userCheckinWithTransaction(checkin *Checkin, userId int, quotaAwarded int) (*Checkin, error) {
 	err := DB.Transaction(func(tx *gorm.DB) error {
+		var user User
+		if err := tx.Select("id", "discord_id").First(&user, userId).Error; err != nil {
+			return err
+		}
+		if strings.TrimSpace(user.DiscordId) == "" {
+			return errCheckinRequiresDiscord
+		}
+
 		// 步骤1: 创建签到记录
 		// 数据库有唯一约束 (user_id, checkin_date)，可以防止并发重复签到
 		if err := tx.Create(checkin).Error; err != nil {

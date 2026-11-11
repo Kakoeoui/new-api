@@ -17,17 +17,36 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Link } from '@tanstack/react-router'
+import { KeyRound } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '@/components/ui/button'
+import { LegalConsent } from '@/features/auth/components/legal-consent'
+import { OAuthProviders } from '@/features/auth/components/oauth-providers'
+import { RecoverByKeyDialog } from '@/features/auth/components/recover-by-key-dialog'
 import { useStatus } from '@/hooks/use-status'
 
 import { AuthLayout } from '../auth-layout'
 import { TermsFooter } from '../components/terms-footer'
-import { SignUpForm } from './components/sign-up-form'
 
 export function SignUp() {
   const { t } = useTranslation()
   const { status } = useStatus()
+  const [agreedToLegal, setAgreedToLegal] = useState(false)
+  const [isRecoverDialogOpen, setIsRecoverDialogOpen] = useState(false)
+
+  const hasUserAgreement = Boolean(status?.user_agreement_enabled)
+  const hasPrivacyPolicy = Boolean(status?.privacy_policy_enabled)
+  const requiresLegalConsent = hasUserAgreement || hasPrivacyPolicy
+
+  useEffect(() => {
+    if (requiresLegalConsent) {
+      setAgreedToLegal(false)
+    } else {
+      setAgreedToLegal(true)
+    }
+  }, [requiresLegalConsent])
 
   return (
     <AuthLayout>
@@ -48,7 +67,46 @@ export function SignUp() {
           </p>
         </div>
 
-        <SignUpForm />
+        <div className='grid gap-4'>
+          <OAuthProviders
+            status={status}
+            discordLabel={t('Sign up with Discord')}
+            disabled={requiresLegalConsent && !agreedToLegal}
+          />
+
+          <div className='relative my-1'>
+            <div className='absolute inset-0 flex items-center'>
+              <span className='w-full border-t' />
+            </div>
+            <div className='relative flex justify-center text-xs uppercase'>
+              <span className='bg-background text-muted-foreground px-2'>
+                {t('Or if you already have an account')}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setIsRecoverDialogOpen(true)}
+            className='h-11 w-full justify-center gap-2 rounded-lg'
+          >
+            <KeyRound className='h-4 w-4' />
+            {t('Recover / Migrate Account with API Key')}
+          </Button>
+
+          <LegalConsent
+            status={status}
+            checked={agreedToLegal}
+            onCheckedChange={setAgreedToLegal}
+            className='mt-1'
+          />
+        </div>
+
+        <RecoverByKeyDialog
+          open={isRecoverDialogOpen}
+          onOpenChange={setIsRecoverDialogOpen}
+        />
 
         <TermsFooter
           variant='sign-up'

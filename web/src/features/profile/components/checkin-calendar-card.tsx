@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import {
+  AlertCircle,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -46,6 +47,7 @@ import dayjs from '@/lib/dayjs'
 import { handleServerError } from '@/lib/handle-server-error'
 import { createServerError } from '@/lib/server-error-message'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { getCheckinStatus, performCheckin } from '../api'
 import type { CheckinRecord } from '../types'
@@ -62,6 +64,10 @@ export function CheckinCalendarCard({
   turnstileSiteKey,
 }: CheckinCalendarCardProps) {
   const { t } = useTranslation()
+  const authUser = useAuthStore((s) => s.auth.user) as
+    | { discord_id?: string }
+    | null
+    | undefined
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -97,6 +103,10 @@ export function CheckinCalendarCard({
     staleTime: 30000,
   })
   /* eslint-enable @tanstack/query/exhaustive-deps */
+
+  const discordLinked =
+    checkinData?.discord_linked !== false &&
+    Boolean(authUser?.discord_id || checkinData?.discord_linked)
 
   const checkinRecordsMap = useMemo(() => {
     const map: Record<string, number> = {}
@@ -142,12 +152,19 @@ export function CheckinCalendarCard({
 
   const doCheckin = useCallback(
     async (token?: string) => {
+      if (!discordLinked) {
+        toast.error(
+          t('You must sign in with a Discord account to use daily check-in (random 0.05 - 1 THB)')
+        )
+        return
+      }
+
       setCheckinLoading(true)
       try {
         const res = await performCheckin(token)
         if (res.success && res.data) {
           toast.success(
-            `${t('Check-in successful! Received')} ${formatQuotaWithCurrency(res.data.quota_awarded)}`
+            `${t('Check-in successful! Received')} ${formatQuotaWithCurrency(res.data.quota_awarded, { digitsLarge: 2, digitsSmall: 2 })}`
           )
           refetch()
           setTurnstileModalVisible(false)
@@ -171,7 +188,7 @@ export function CheckinCalendarCard({
         setCheckinLoading(false)
       }
     },
-    [refetch, shouldTriggerTurnstile, t, turnstileSiteKey]
+    [discordLinked, refetch, shouldTriggerTurnstile, t, turnstileSiteKey]
   )
 
   const handlePrevMonth = () => {
@@ -319,20 +336,32 @@ export function CheckinCalendarCard({
                 </div>
                 <p className='text-muted-foreground mt-1 line-clamp-2 text-xs sm:text-sm'>
                   {checkedToday && todayAward !== undefined
-                    ? `${t('Today')} +${formatQuotaWithCurrency(todayAward)}`
-                    : t('Check in daily to receive random quota rewards')}
+                    ? `${t('Today')} +${formatQuotaWithCurrency(todayAward, { digitsLarge: 2, digitsSmall: 2 })}`
+                    : t('Check in daily to receive random rewards (0.05 - 1 THB)')}
                 </p>
               </div>
             </button>
             <Button
               onClick={() => doCheckin()}
-              disabled={checkinLoading || checkedToday}
+              disabled={checkinLoading || checkedToday || !discordLinked}
               size='sm'
               className='w-full shrink-0 sm:w-auto'
             >
               {checkinButtonLabel}
             </Button>
           </div>
+
+          {!discordLinked && (
+            <div
+              role='alert'
+              className='mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs font-medium text-amber-700 sm:text-sm dark:text-amber-400'
+            >
+              <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
+              <span>
+                {t('You must sign in with a Discord account to use daily check-in (random 0.05 - 1 THB)')}
+              </span>
+            </div>
+          )}
         </div>
 
         {!collapsed ? (
@@ -349,7 +378,10 @@ export function CheckinCalendarCard({
               </div>
               <div className='bg-card p-3 text-center sm:p-5'>
                 <div className='text-xl font-semibold tracking-tight tabular-nums sm:text-2xl'>
-                  {formatQuotaWithCurrency(monthlyQuota, { digitsLarge: 0 })}
+                  {formatQuotaWithCurrency(monthlyQuota, {
+                    digitsLarge: 2,
+                    digitsSmall: 2,
+                  })}
                 </div>
                 <div className='text-muted-foreground mt-0.5 text-[10px] font-medium sm:mt-1 sm:text-xs'>
                   {t('This month')}
@@ -360,7 +392,8 @@ export function CheckinCalendarCard({
                   {formatQuotaWithCurrency(
                     checkinData?.stats?.total_quota || 0,
                     {
-                      digitsLarge: 0,
+                      digitsLarge: 2,
+                      digitsSmall: 2,
                     }
                   )}
                 </div>
@@ -451,7 +484,11 @@ export function CheckinCalendarCard({
                                 {t('Checked in')}
                               </div>
                               <div className='text-muted-foreground mt-0.5'>
-                                +{formatQuotaWithCurrency(quotaAwarded)}
+                                +
+                                {formatQuotaWithCurrency(quotaAwarded, {
+                                  digitsLarge: 2,
+                                  digitsSmall: 2,
+                                })}
                               </div>
                             </div>
                           </TooltipContent>
@@ -471,7 +508,7 @@ export function CheckinCalendarCard({
                 <div className='bg-muted/30 text-muted-foreground rounded-lg border p-3 text-xs'>
                   <ul className='list-disc space-y-1 pl-5'>
                     <li>
-                      {t('Check in daily to receive random quota rewards')}
+                      {t('Check in daily to receive random rewards (0.05 - 1 THB)')}
                     </li>
                     <li>
                       {t('Rewards will be added directly to your balance')}

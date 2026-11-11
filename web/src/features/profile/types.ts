@@ -223,14 +223,23 @@ export interface CheckinStats {
 }
 
 /**
- * Check-in status response
+ * Check-in status payload data
  */
-export interface CheckinStatusResponse {
+export interface CheckinStatusData {
   /** Whether check-in feature is enabled */
   enabled: boolean
+  /** Whether user has linked a Discord account */
+  discord_linked?: boolean
+  /** Whether Discord login/binding is required to check in */
+  require_discord?: boolean
   /** Check-in statistics */
   stats: CheckinStats
 }
+
+/**
+ * Check-in status response
+ */
+export type CheckinStatusResponse = CheckinStatusData
 
 /**
  * Check-in action response

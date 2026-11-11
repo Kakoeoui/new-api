@@ -39,6 +39,7 @@ type OAuthProvidersProps = {
   onWeChatLogin?: () => void
   isWeChatLoading?: boolean
   redirectTo?: string
+  discordLabel?: string
 }
 
 type ProviderButton = {
@@ -56,6 +57,7 @@ export function OAuthProviders({
   onWeChatLogin,
   isWeChatLoading = false,
   redirectTo,
+  discordLabel,
 }: OAuthProvidersProps) {
   const { t } = useTranslation()
   const {
@@ -70,10 +72,10 @@ export function OAuthProviders({
     handleCustomOAuthLogin,
   } = useOAuthLogin(status, redirectTo)
 
-  const providerButtons: ProviderButton[] = []
+  const secondaryProviderButtons: ProviderButton[] = []
 
   if (status?.wechat_login && onWeChatLogin) {
-    providerButtons.push({
+    secondaryProviderButtons.push({
       key: 'wechat',
       label: t('Continue with WeChat'),
       onClick: onWeChatLogin,
@@ -83,7 +85,7 @@ export function OAuthProviders({
   }
 
   if (status?.github_oauth) {
-    providerButtons.push({
+    secondaryProviderButtons.push({
       key: 'github',
       label: githubButtonText || t('Continue with GitHub'),
       onClick: handleGitHubLogin,
@@ -92,18 +94,9 @@ export function OAuthProviders({
     })
   }
 
-  if (status?.discord_oauth) {
-    providerButtons.push({
-      key: 'discord',
-      label: t('Continue with Discord'),
-      onClick: handleDiscordLogin,
-      icon: <IconDiscord className='h-4 w-4' />,
-    })
-  }
-
   if (status?.oidc_enabled) {
     const oidcDisplayName = status.oidc_display_name?.trim() || 'OIDC'
-    providerButtons.push({
+    secondaryProviderButtons.push({
       key: 'oidc',
       label: t('Continue with {{name}}', {
         name: oidcDisplayName,
@@ -113,7 +106,7 @@ export function OAuthProviders({
   }
 
   if (status?.linuxdo_oauth) {
-    providerButtons.push({
+    secondaryProviderButtons.push({
       key: 'linuxdo',
       label: t('Continue with LinuxDO'),
       onClick: handleLinuxDOLogin,
@@ -122,7 +115,7 @@ export function OAuthProviders({
   }
 
   if (status?.telegram_oauth) {
-    providerButtons.push({
+    secondaryProviderButtons.push({
       key: 'telegram',
       label: t('Continue with Telegram'),
       onClick: handleTelegramLogin,
@@ -130,11 +123,10 @@ export function OAuthProviders({
     })
   }
 
-  // Custom OAuth providers
   const customProviders = status?.custom_oauth_providers
   if (customProviders && customProviders.length > 0) {
     for (const provider of customProviders) {
-      providerButtons.push({
+      secondaryProviderButtons.push({
         key: `custom-${provider.slug}`,
         label: t('Continue with {{name}}', { name: provider.name }),
         onClick: () => handleCustomOAuthLogin(provider),
@@ -142,38 +134,51 @@ export function OAuthProviders({
     }
   }
 
-  if (providerButtons.length === 0) return null
-
   return (
     <div className={cn('space-y-3', className)}>
-      <div className='relative'>
-        <div className='absolute inset-0 flex items-center'>
-          <span className='w-full border-t' />
-        </div>
-        <div className='relative flex justify-center text-xs uppercase'>
-          <span className='bg-background text-muted-foreground px-2'>
-            {t('Or continue with')}
-          </span>
-        </div>
-      </div>
+      <Button
+        type='button'
+        variant='default'
+        disabled={disabled || isLoading}
+        onClick={handleDiscordLogin}
+        className='h-11 w-full justify-center gap-2.5 rounded-lg bg-[#5865F2] font-medium text-white hover:bg-[#4752C4] dark:bg-[#5865F2] dark:text-white dark:hover:bg-[#4752C4]'
+      >
+        <IconDiscord className='h-5 w-5' />
+        {discordLabel || t('Continue with Discord')}
+      </Button>
 
-      <div className='flex flex-col gap-2'>
-        {providerButtons.map(
-          ({ key, label, onClick, icon, disabled: extraDisabled }) => (
-            <Button
-              key={key}
-              variant='outline'
-              type='button'
-              disabled={disabled || isLoading || extraDisabled}
-              onClick={onClick}
-              className='h-11 w-full justify-center gap-2 rounded-lg'
-            >
-              {icon}
-              {label}
-            </Button>
-          )
-        )}
-      </div>
+      {secondaryProviderButtons.length > 0 && (
+        <>
+          <div className='relative'>
+            <div className='absolute inset-0 flex items-center'>
+              <span className='w-full border-t' />
+            </div>
+            <div className='relative flex justify-center text-xs uppercase'>
+              <span className='bg-background text-muted-foreground px-2'>
+                {t('Or continue with')}
+              </span>
+            </div>
+          </div>
+
+          <div className='flex flex-col gap-2'>
+            {secondaryProviderButtons.map(
+              ({ key, label, onClick, icon, disabled: extraDisabled }) => (
+                <Button
+                  key={key}
+                  variant='outline'
+                  type='button'
+                  disabled={disabled || isLoading || extraDisabled}
+                  onClick={onClick}
+                  className='h-11 w-full justify-center gap-2 rounded-lg'
+                >
+                  {icon}
+                  {label}
+                </Button>
+              )
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
