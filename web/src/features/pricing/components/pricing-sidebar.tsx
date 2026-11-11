@@ -37,8 +37,7 @@ import {
   getEndpointTypeLabels,
   getQuotaTypeLabels,
 } from '../constants'
-import { hasTaskUsageSchema } from '../lib/dynamic-price'
-import { extractModelHouse, parseTags } from '../lib/filters'
+import { extractModelHouse, getModelQuotaType, parseTags } from '../lib/filters'
 import type { PricingModel, PricingVendor } from '../types'
 
 type FilterOption = {
@@ -179,13 +178,8 @@ export const PricingSidebar = memo(function PricingSidebar(
       for (const endpoint of new Set(model.supported_endpoint_types ?? [])) {
         endpoints.set(endpoint, (endpoints.get(endpoint) ?? 0) + 1)
       }
-      if (hasTaskUsageSchema(model)) {
-        quotas.task++
-      } else if (model.quota_type === 0) {
-        quotas.token++
-      } else if (model.quota_type === 1) {
-        quotas.request++
-      }
+      const quotaType = getModelQuotaType(model)
+      if (quotaType) quotas[quotaType]++
     }
     return { houses, vendors, tags, endpoints, quotas }
   }, [props.models])
@@ -198,7 +192,7 @@ export const PricingSidebar = memo(function PricingSidebar(
       label: t('All Houses'),
       count: props.models.length,
     },
-    ...Array.from(counts.houses.entries())
+    ...[...counts.houses.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([house, count]) => ({
         value: house,

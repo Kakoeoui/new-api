@@ -245,6 +245,5 @@ export type CheckinStatusResponse = CheckinStatusData
  * Check-in action response
  */
 export interface CheckinResponse {
-  /** Quota awarded for this check-in */
-  quota_awarded: number
+  authorization_url: string
 }

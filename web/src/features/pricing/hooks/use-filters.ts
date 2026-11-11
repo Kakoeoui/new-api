@@ -77,6 +77,7 @@ export function useFilters(models: PricingModel[]) {
     filterState.sort === SORT_OPTIONS.PRICE_HIGH
       ? filterState.sort
       : SORT_OPTIONS.NAME
+  const houseFilter = filterState.house || FILTER_ALL
   const vendorFilter = filterState.vendor || FILTER_ALL
   const groupFilter = filterState.group || FILTER_ALL
   const quotaTypeFilter = filterState.quotaType || QUOTA_TYPES.ALL

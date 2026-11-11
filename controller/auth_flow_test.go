@@ -9,8 +9,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -20,6 +22,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/gin-gonic/gin"
@@ -1120,6 +1123,158 @@ func TestOAuthBindIgnoresLegacyGitHubUsernames(t *testing.T) {
 			}
 			assert.Equal(t, test.ownGitHubID, bound.GitHubId)
 			assert.Equal(t, "This GitHub account has already been bound", result.Message)
+		})
+	}
+}
+
+func TestOAuthRegistrationPersistsInviter(t *testing.T) {
+	db, dialect := openTaskDialectDatabase(t, &model.User{}, &model.Log{})
+	oldDB, oldLogDB := model.DB, model.LOG_DB
+	oldMain, oldLog := common.MainDatabaseType(), common.LogDatabaseType()
+	oldRedis, oldRegister := common.RedisEnabled, common.RegisterEnabled
+	oldNew, oldInvitee, oldInviter := common.QuotaForNewUser, common.QuotaForInvitee, common.QuotaForInviter
+	model.DB, model.LOG_DB = db, db
+	common.SetDatabaseTypes(dialect, dialect)
+	common.RedisEnabled, common.RegisterEnabled = false, true
+	common.QuotaForNewUser, common.QuotaForInvitee, common.QuotaForInviter = 0, 0, 0
+	t.Cleanup(func() {
+		model.DB, model.LOG_DB = oldDB, oldLogDB
+		common.SetDatabaseTypes(oldMain, oldLog)
+		common.RedisEnabled, common.RegisterEnabled = oldRedis, oldRegister
+		common.QuotaForNewUser, common.QuotaForInvitee, common.QuotaForInviter = oldNew, oldInvitee, oldInviter
+	})
+	inviter := model.User{Username: "inviter", AffCode: "valid-aff", Status: common.UserStatusEnabled}
+	require.NoError(t, db.Create(&inviter).Error)
+	for _, tc := range []struct {
+		name, code string
+		want       int
+	}{
+		{"valid", "valid-aff", inviter.Id}, {"missing", "", 0}, {"invalid", "unknown-aff", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			provider := &oauth.GitHubProvider{}
+			identity := &oauth.OAuthUser{ProviderUserID: "inviter-test-" + tc.name, Username: "oauth-" + tc.name}
+			created, _, err := findOrCreateOAuthUser(ctx, provider, identity, &oauth.OAuthToken{}, tc.code)
+			require.NoError(t, err)
+			var stored model.User
+			require.NoError(t, db.First(&stored, created.Id).Error)
+			assert.Equal(t, tc.want, stored.InviterId)
+			assert.Equal(t, identity.ProviderUserID, stored.GitHubId)
+			existing, _, err := findOrCreateOAuthUser(ctx, provider, identity, &oauth.OAuthToken{}, "valid-aff")
+			require.NoError(t, err)
+			assert.Equal(t, created.Id, existing.Id)
+			require.NoError(t, db.First(&stored, created.Id).Error)
+			assert.Equal(t, tc.want, stored.InviterId, "login must not reassign the inviter")
+		})
+	}
+}
+
+type checkinOAuthTransport func(*http.Request) (*http.Response, error)
+
+func (f checkinOAuthTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestCheckinOAuthIsSessionBoundSingleUseAndNeverStoresDiscordTokens(t *testing.T) {
+	for _, test := range []struct {
+		name, discordID, memberRoles string
+		allowed                      bool
+	}{
+		{"eligible", "123456789012345678", `["1509198060599902279"]`, true},
+		{"wrong Discord account", "223456789012345678", `["1509198060599902279"]`, false},
+		{"missing role", "123456789012345678", `[]`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			setupAuthFlowControllerTest(t)
+			require.NoError(t, model.DB.AutoMigrate(&model.Checkin{}, &model.Log{}))
+			previousSecret := common.SessionSecret
+			common.SessionSecret = "checkin-oauth-test-secret"
+			previousDiscord := *system_setting.GetDiscordSettings()
+			*system_setting.GetDiscordSettings() = system_setting.DiscordSettings{Enabled: true, ClientId: "test-client", ClientSecret: "test-client-secret"}
+			previousSetting := *operation_setting.GetCheckinSetting()
+			operation_setting.GetCheckinSetting().Enabled = true
+			operation_setting.GetCheckinSetting().MinQuota = 15000
+			operation_setting.GetCheckinSetting().MaxQuota = 15000
+			t.Cleanup(func() {
+				common.SessionSecret = previousSecret
+				*system_setting.GetDiscordSettings() = previousDiscord
+				*operation_setting.GetCheckinSetting() = previousSetting
+			})
+			user := model.User{Username: "checkin-oauth", Status: common.UserStatusEnabled, Role: common.RoleCommonUser, Group: "default", AuthVersion: 1, DiscordId: "123456789012345678"}
+			require.NoError(t, model.DB.Create(&user).Error)
+			require.NoError(t, model.PublishUserAuthCache(user.Id))
+			bundle, err := service.CreateLoginSession(user.Id, "discord", "127.0.0.1", "checkin-test")
+			require.NoError(t, err)
+			identity, err := service.ParseAccessToken(bundle.AccessToken)
+			require.NoError(t, err)
+			response := securityEnrollmentRequest("POST", "/api/user/checkin", "", "", identity, DoCheckin)
+			var start struct {
+				Success bool `json:"success"`
+				Data    struct {
+					URL string `json:"authorization_url"`
+				} `json:"data"`
+			}
+			require.NoError(t, common.Unmarshal(response.Body.Bytes(), &start))
+			require.True(t, start.Success, response.Body.String())
+			authorization, err := url.Parse(start.Data.URL)
+			require.NoError(t, err)
+			assert.Equal(t, "https://discord.com/oauth2/authorize", authorization.Scheme+"://"+authorization.Host+authorization.Path)
+			assert.Equal(t, "identify guilds.members.read", authorization.Query().Get("scope"))
+			state := authorization.Query().Get("state")
+			flow, err := model.GetAuthFlow(state, model.AuthFlowMatch{Purpose: model.AuthFlowPurposeOAuth, Intent: model.AuthFlowIntentCheckin, UserId: user.Id, SessionId: identity.SessionID})
+			require.NoError(t, err)
+			assert.Empty(t, flow.Payload)
+			calls := 0
+			previousTransport := http.DefaultTransport
+			http.DefaultTransport = checkinOAuthTransport(func(r *http.Request) (*http.Response, error) {
+				calls++
+				assert.Equal(t, "discord.com", r.URL.Host)
+				body := ""
+				switch r.URL.Path {
+				case "/api/v10/oauth2/token":
+					body = `{"access_token":"ephemeral-discord-token","refresh_token":"never-save-refresh-token","scope":"identify guilds.members.read"}`
+				case "/api/v10/users/@me":
+					body = `{"id":"` + test.discordID + `","username":"checkin-user"}`
+				case "/api/v10/users/@me/guilds/1444925702234177640/member":
+					assert.Equal(t, "Bearer ephemeral-discord-token", r.Header.Get("Authorization"))
+					body = `{"user":{"id":"` + test.discordID + `"},"roles":` + test.memberRoles + `}`
+				default:
+					t.Fatalf("Unexpected Discord path: %s", r.URL.Path)
+				}
+				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+			})
+			t.Cleanup(func() { http.DefaultTransport = previousTransport })
+			callback := func(c *gin.Context) { c.Params = gin.Params{{Key: "provider", Value: "discord"}}; HandleOAuth(c) }
+			path := "/api/oauth/discord?code=test-code&state=" + state
+			invalid := identity
+			invalid.SessionID = "other-session"
+			rejected := securityEnrollmentRequest("GET", path, "", "", invalid, callback)
+			assert.Contains(t, rejected.Body.String(), `"success":false`)
+			assert.Zero(t, calls)
+			completed := securityEnrollmentRequest("GET", path, "", "", identity, callback)
+			var result struct {
+				Success bool   `json:"success"`
+				Action  string `json:"action"`
+			}
+			require.NoError(t, common.Unmarshal(completed.Body.Bytes(), &result))
+			assert.Equal(t, test.allowed, result.Success, completed.Body.String())
+			if test.allowed {
+				assert.Equal(t, "checkin", result.Action)
+			}
+			beforeReplay := calls
+			replay := securityEnrollmentRequest("GET", path, "", "", identity, callback)
+			assert.Contains(t, replay.Body.String(), `"success":false`)
+			assert.Equal(t, beforeReplay, calls)
+			var saved model.User
+			require.NoError(t, model.DB.First(&saved, user.Id).Error)
+			if test.allowed {
+				assert.Equal(t, 15000, saved.Quota)
+			} else {
+				assert.Zero(t, saved.Quota)
+			}
+			require.NoError(t, model.DB.First(flow, flow.Id).Error)
+			assert.Empty(t, flow.Payload)
+			assert.NotContains(t, completed.Body.String(), "ephemeral-discord-token")
+			assert.NotContains(t, completed.Body.String(), "never-save-refresh-token")
 		})
 	}
 }

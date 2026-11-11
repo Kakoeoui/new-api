@@ -86,11 +86,7 @@ export function CheckinCalendarCard({
 
   // Fetch checkin status
   /* eslint-disable @tanstack/query/exhaustive-deps */
-  const {
-    data: checkinData,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { data: checkinData, isLoading } = useQuery({
     queryKey: ['checkin-status', currentMonthStr],
     queryFn: async () => {
       const res = await getCheckinStatus(currentMonthStr)
@@ -154,7 +150,9 @@ export function CheckinCalendarCard({
     async (token?: string) => {
       if (!discordLinked) {
         toast.error(
-          t('You must sign in with a Discord account to use daily check-in (random 0.05 - 1 THB)')
+          t(
+            'You must sign in with a Discord account to use daily check-in (random 0.03 - 0.50 THB)'
+          )
         )
         return
       }
@@ -162,33 +160,36 @@ export function CheckinCalendarCard({
       setCheckinLoading(true)
       try {
         const res = await performCheckin(token)
-        if (res.success && res.data) {
-          toast.success(
-            `${t('Check-in successful! Received')} ${formatQuotaWithCurrency(res.data.quota_awarded, { digitsLarge: 2, digitsSmall: 2 })}`
-          )
-          refetch()
-          setTurnstileModalVisible(false)
-        } else {
-          if (!token && shouldTriggerTurnstile(res.message)) {
-            if (!turnstileSiteKey) {
-              toast.error(t('Turnstile is enabled but site key is empty.'))
-              return
-            }
-            setTurnstileModalVisible(true)
+        if (res.success && res.data?.authorization_url) {
+          const authorization = new URL(res.data.authorization_url)
+          if (
+            authorization.origin !== 'https://discord.com' ||
+            authorization.pathname !== '/oauth2/authorize'
+          ) {
+            throw new Error('Invalid Discord authorization URL')
+          }
+          window.location.assign(authorization.toString())
+          return
+        }
+        if (!token && shouldTriggerTurnstile(res.message)) {
+          if (!turnstileSiteKey) {
+            toast.error(t('Turnstile is enabled but site key is empty.'))
             return
           }
-          if (token && shouldTriggerTurnstile(res.message)) {
-            setTurnstileWidgetKey((v) => v + 1)
-          }
-          handleServerError(res, t('Check-in failed'))
+          setTurnstileModalVisible(true)
+          return
         }
+        if (token && shouldTriggerTurnstile(res.message)) {
+          setTurnstileWidgetKey((v) => v + 1)
+        }
+        handleServerError(res, t('Check-in failed'))
       } catch (error) {
         handleServerError(error, t('Check-in failed'))
       } finally {
         setCheckinLoading(false)
       }
     },
-    [discordLinked, refetch, shouldTriggerTurnstile, t, turnstileSiteKey]
+    [discordLinked, shouldTriggerTurnstile, t, turnstileSiteKey]
   )
 
   const handlePrevMonth = () => {
@@ -337,7 +338,14 @@ export function CheckinCalendarCard({
                 <p className='text-muted-foreground mt-1 line-clamp-2 text-xs sm:text-sm'>
                   {checkedToday && todayAward !== undefined
                     ? `${t('Today')} +${formatQuotaWithCurrency(todayAward, { digitsLarge: 2, digitsSmall: 2 })}`
-                    : t('Check in daily to receive random rewards (0.05 - 1 THB)')}
+                    : t(
+                        'Check in daily to receive random rewards (0.03 - 0.50 THB)'
+                      )}
+                </p>
+                <p className='text-muted-foreground mt-1 text-xs'>
+                  {t(
+                    'Verify with Discord for each check-in. Join our server and have Verified Kitten or an approved higher role. Small rewards are more common.'
+                  )}
                 </p>
               </div>
             </button>
@@ -358,7 +366,9 @@ export function CheckinCalendarCard({
             >
               <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
               <span>
-                {t('You must sign in with a Discord account to use daily check-in (random 0.05 - 1 THB)')}
+                {t(
+                  'You must sign in with a Discord account to use daily check-in (random 0.03 - 0.50 THB)'
+                )}
               </span>
             </div>
           )}
@@ -508,7 +518,9 @@ export function CheckinCalendarCard({
                 <div className='bg-muted/30 text-muted-foreground rounded-lg border p-3 text-xs'>
                   <ul className='list-disc space-y-1 pl-5'>
                     <li>
-                      {t('Check in daily to receive random rewards (0.05 - 1 THB)')}
+                      {t(
+                        'Check in daily to receive random rewards (0.03 - 0.50 THB)'
+                      )}
                     </li>
                     <li>
                       {t('Rewards will be added directly to your balance')}

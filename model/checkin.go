@@ -1,8 +1,9 @@
 package model
 
 import (
-	"errors"
-	"math/rand"
+	"context"
+	"crypto/rand"
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var errCheckinRequiresDiscord = errors.New("ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้")
+var errCheckinRequiresDiscord = common.NewMessage("You must link Discord before checking in.")
 
 // Checkin 签到记录
 type Checkin struct {
@@ -64,20 +65,18 @@ func HasCheckedInToday(userId int) (bool, error) {
 	return count > 0, err
 }
 
-// UserCheckin 执行用户签到
-// MySQL 和 PostgreSQL 使用事务保证原子性
-// SQLite 不支持嵌套事务，使用顺序操作 + 手动回滚
-func UserCheckin(userId int) (*Checkin, error) {
+// UserCheckin verifies eligibility before atomically recording and crediting the reward.
+func UserCheckin(ctx context.Context, userId int, discordID, accessToken string) (*Checkin, error) {
 	setting := operation_setting.GetCheckinSetting()
 	if !setting.Enabled {
 		return nil, common.NewMessage("Check-in feature is not enabled")
 	}
 
-	discordLinked, err := IsUserDiscordLinked(userId)
-	if err != nil {
+	var user User
+	if err := DB.Select("id", "discord_id").First(&user, userId).Error; err != nil {
 		return nil, err
 	}
-	if !discordLinked {
+	if strings.TrimSpace(user.DiscordId) == "" || user.DiscordId != discordID {
 		return nil, errCheckinRequiresDiscord
 	}
 
@@ -91,9 +90,15 @@ func UserCheckin(userId int) (*Checkin, error) {
 	}
 
 	// 计算随机额度奖励
-	quotaAwarded := setting.MinQuota
-	if setting.MaxQuota > setting.MinQuota {
-		quotaAwarded = setting.MinQuota + rand.Intn(setting.MaxQuota-setting.MinQuota+1)
+	verificationContext, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	client := &http.Client{Timeout: 8 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	if err := verifyCheckinDiscordMember(verificationContext, client, user.DiscordId, accessToken); err != nil {
+		return nil, err
+	}
+	quotaAwarded, err := drawCheckinQuota(setting.MinQuota, setting.MaxQuota, rand.Reader)
+	if err != nil {
+		return nil, err
 	}
 
 	today := time.Now().Format("2006-01-02")
@@ -104,24 +109,17 @@ func UserCheckin(userId int) (*Checkin, error) {
 		CreatedAt:    time.Now().Unix(),
 	}
 
-	// 根据数据库类型选择不同的策略
-	if common.UsingMainDatabase(common.DatabaseTypeSQLite) {
-		// SQLite 不支持嵌套事务，使用顺序操作 + 手动回滚
-		return userCheckinWithoutTransaction(checkin, userId, quotaAwarded)
-	}
-
-	// MySQL 和 PostgreSQL 支持事务，使用事务保证原子性
-	return userCheckinWithTransaction(checkin, userId, quotaAwarded)
+	return userCheckinWithTransaction(checkin, userId, quotaAwarded, user.DiscordId)
 }
 
-// userCheckinWithTransaction 使用事务执行签到（适用于 MySQL 和 PostgreSQL）
-func userCheckinWithTransaction(checkin *Checkin, userId int, quotaAwarded int) (*Checkin, error) {
+// userCheckinWithTransaction uses one transaction on SQLite, MySQL and PostgreSQL.
+func userCheckinWithTransaction(checkin *Checkin, userId int, quotaAwarded int, discordID string) (*Checkin, error) {
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var user User
 		if err := tx.Select("id", "discord_id").First(&user, userId).Error; err != nil {
 			return err
 		}
-		if strings.TrimSpace(user.DiscordId) == "" {
+		if strings.TrimSpace(user.DiscordId) == "" || user.DiscordId != discordID {
 			return errCheckinRequiresDiscord
 		}
 
@@ -132,9 +130,13 @@ func userCheckinWithTransaction(checkin *Checkin, userId int, quotaAwarded int) 
 		}
 
 		// 步骤2: 在事务中增加用户额度
-		if err := tx.Model(&User{}).Where("id = ?", userId).
-			Update("quota", gorm.Expr("quota + ?", quotaAwarded)).Error; err != nil {
+		result := tx.Model(&User{}).Where("id = ? AND discord_id = ?", userId, discordID).
+			Update("quota", gorm.Expr("quota + ?", quotaAwarded))
+		if result.Error != nil {
 			return common.NewMessage("Check-in failed: quota update error")
+		}
+		if result.RowsAffected != 1 {
+			return errCheckinRequiresDiscord
 		}
 
 		return nil
@@ -148,25 +150,6 @@ func userCheckinWithTransaction(checkin *Checkin, userId int, quotaAwarded int) 
 	go func() {
 		_ = cacheIncrUserQuota(userId, int64(quotaAwarded))
 	}()
-
-	return checkin, nil
-}
-
-// userCheckinWithoutTransaction 不使用事务执行签到（适用于 SQLite）
-func userCheckinWithoutTransaction(checkin *Checkin, userId int, quotaAwarded int) (*Checkin, error) {
-	// 步骤1: 创建签到记录
-	// 数据库有唯一约束 (user_id, checkin_date)，可以防止并发重复签到
-	if err := DB.Create(checkin).Error; err != nil {
-		return nil, common.NewMessage("Check-in failed, please try again later")
-	}
-
-	// 步骤2: 增加用户额度
-	// 使用 db=true 强制直接写入数据库，不使用批量更新
-	if err := IncreaseUserQuota(userId, quotaAwarded, true); err != nil {
-		// 如果增加额度失败，需要回滚签到记录
-		DB.Delete(checkin)
-		return nil, common.NewMessage("Check-in failed: quota update error")
-	}
 
 	return checkin, nil
 }
