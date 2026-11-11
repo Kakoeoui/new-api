@@ -174,11 +174,21 @@ func HandleOAuth(c *gin.Context) {
 		}()
 	}
 	// Bind and verification callbacks must use the dashboard session that started them.
-	if pendingFlow.Intent == model.AuthFlowIntentBind || pendingFlow.Intent == model.AuthFlowIntentVerify {
+	if pendingFlow.Intent == model.AuthFlowIntentBind || pendingFlow.Intent == model.AuthFlowIntentVerify || pendingFlow.Intent == model.AuthFlowIntentCheckin {
 		identity, ok := middleware.GetSessionAuthIdentity(c)
 		if !ok || identity.UserID != pendingFlow.UserId || identity.SessionID != pendingFlow.SessionId {
 			writeAccountStatusError(c, http.StatusForbidden, "State parameter is empty or mismatched")
 			return
+		}
+		if pendingFlow.Intent == model.AuthFlowIntentCheckin {
+			if providerName != "discord" {
+				common.ApiErrorT(c, "Invalid parameters")
+				return
+			}
+			if _, _, err := service.ValidateLoginSession(identity); err != nil {
+				writeSecurityOperationError(c, err)
+				return
+			}
 		}
 		consumeMatch.UserId = identity.UserID
 		consumeMatch.SessionId = identity.SessionID
@@ -239,6 +249,10 @@ func HandleOAuth(c *gin.Context) {
 			writeAccountStatusError(c, http.StatusForbidden, "State parameter is empty or mismatched")
 			return
 		}
+		if pendingFlow.Intent == model.AuthFlowIntentCheckin {
+			common.ApiErrorStatus(c, http.StatusOK, common.NewMessage("Discord authorization was cancelled. Please try again."), gin.H{"action": "checkin"})
+			return
+		}
 		errorDescription := c.Query("error_description")
 		if errorDescription == "" {
 			errorDescription = errorCode
@@ -284,6 +298,8 @@ func HandleOAuth(c *gin.Context) {
 	switch flow.Intent {
 	case model.AuthFlowIntentLogin:
 		handleOAuthLogin(c, provider, oauthUser, token, flow)
+	case model.AuthFlowIntentCheckin:
+		handleOAuthCheckin(c, oauthUser, token, flow)
 	case model.AuthFlowIntentVerify:
 		handleOAuthVerification(c, providerName, oauthUser, flow)
 	}

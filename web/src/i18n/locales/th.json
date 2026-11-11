@@ -1,5 +1,13 @@
 {
   "translation": {
+    "Discord authorization was cancelled. Please try again.": "การยืนยัน Discord ถูกยกเลิก กรุณาลองใหม่",
+    "Verify with Discord for each check-in. Join our server and have Verified Kitten or an approved higher role. Small rewards are more common.": "ยืนยันผ่าน Discord ทุกครั้งที่เช็กอิน ต้องอยู่ในเซิร์ฟเวอร์ของเราและมียศ Verified Kitten หรือยศสูงกว่าที่อนุญาต รางวัลเล็กมีโอกาสออกมากกว่า",
+    "You must link Discord before checking in.": "กรุณาผูกบัญชี Discord ก่อนเช็กอิน",
+    "Sign in to check in": "กรุณาเข้าสู่ระบบก่อนเช็กอิน",
+    "Discord verification is unavailable. Please try again later.": "ยังตรวจสอบ Discord ไม่สำเร็จ กรุณาลองใหม่ภายหลัง",
+    "Daily check-in requires membership in our Discord server and the minimum required role or higher.": "ต้องเป็นสมาชิกเซิร์ฟเวอร์ Discord ของเราและมียศขั้นต่ำหรือยศสูงกว่าที่อนุญาตจึงจะเช็กอินได้",
+    "Check-in reward range must be between 0.03 and 0.50 THB": "ช่วงรางวัลเช็กอินต้องอยู่ระหว่าง 0.03 ถึง 0.50 บาท",
+    "Check-in reward range must include a whole satang amount": "ช่วงรางวัลเช็กอินต้องมีจำนวนเต็มสตางค์อย่างน้อยหนึ่งค่า",
     "360": "360",
     "1000": "1000",
     "10000": "10000",
@@ -7330,9 +7338,9 @@
     "Or": "หรือ",
     "Or if you already have an account": "หรือมีบัญชีเดิมอยู่แล้ว",
     "Signed in with Discord (Local Test Mode)!": "เข้าสู่ระบบด้วย Discord (โหมดทดสอบ Local) สำเร็จ!",
-    "Check in daily to receive random rewards (0.05 - 1 THB)": "เช็คอินรายวันเพื่อรับโควต้าสุ่ม (0.05 - 1 บาท)",
+    "Check in daily to receive random rewards (0.03 - 0.50 THB)": "เช็คอินรายวันเพื่อรับโควต้าสุ่ม (0.03 - 0.50 บาท)",
     "Discord Login Required": "ต้องใช้บัญชี Discord",
-    "You must sign in with a Discord account to use daily check-in (random 0.05 - 1 THB)": "ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้ (สุ่มรับ 0.05 - 1 บาท)",
+    "You must sign in with a Discord account to use daily check-in (random 0.03 - 0.50 THB)": "ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้ (สุ่มรับ 0.03 - 0.50 บาท)",
     "Daily check-in requires a Discord-linked account": "ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้"
   },
   "Announcements and timeline": "ประกาศและไทม์ไลน์",

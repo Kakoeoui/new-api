@@ -228,6 +228,11 @@ function OAuthCallback() {
         if (!active) return
         if (response.data?.success) {
           completedLogin.current = loginKey
+          if (response.data.action === 'checkin') {
+            toast.success(i18next.t('Check-in successful'))
+            safeNavigate('/profile', '/profile')
+            return
+          }
           if (
             await handleLoginResult(
               response.data.data,
@@ -245,6 +250,10 @@ function OAuthCallback() {
             ? i18next.t(messageKey)
             : response.data?.message || i18next.t('OAuth failed')
         )
+        if (response.data.action === 'checkin') {
+          safeNavigate('/profile', '/profile')
+          return
+        }
       } catch (error: unknown) {
         if (!active) return
         handleServerError(

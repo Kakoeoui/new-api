@@ -1,14 +1,19 @@
 package controller
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/oauth"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,12 +43,14 @@ func GetCheckinStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
-			"enabled":         setting.Enabled,
-			"min_quota":       setting.MinQuota,
-			"max_quota":       setting.MaxQuota,
-			"discord_linked":  discordLinked,
-			"require_discord": true,
-			"stats":           stats,
+			"enabled":           setting.Enabled,
+			"min_quota":         setting.MinQuota,
+			"max_quota":         setting.MaxQuota,
+			"discord_linked":    discordLinked,
+			"require_discord":   true,
+			"required_guild_id": model.CheckinDiscordGuildID,
+			"minimum_role_id":   model.CheckinDiscordMinimumRoleID,
+			"stats":             stats,
 		},
 	})
 }
@@ -63,18 +70,46 @@ func DoCheckin(c *gin.Context) {
 		return
 	}
 	if !discordLinked {
-		common.ApiError(c, errors.New("ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้"))
+		common.ApiErrorT(c, "You must link Discord before checking in.")
 		return
 	}
 
-	checkin, err := model.UserCheckin(userId)
+	identity, ok := middleware.GetSessionAuthIdentity(c)
+	if !ok {
+		common.ApiErrorT(c, "Sign in to check in")
+		return
+	}
+	if _, _, err := service.ValidateLoginSession(identity); err != nil {
+		writeSecurityOperationError(c, err)
+		return
+	}
+	discord := system_setting.GetDiscordSettings()
+	if !discord.Enabled || discord.ClientId == "" || discord.ClientSecret == "" {
+		common.ApiErrorT(c, "Discord verification is unavailable. Please try again later.")
+		return
+	}
+	state, _, err := model.CreateAuthFlow(model.AuthFlowCreate{
+		Purpose: model.AuthFlowPurposeOAuth, Provider: "discord", Intent: model.AuthFlowIntentCheckin,
+		UserId: identity.UserID, SessionId: identity.SessionID, ExpiresAt: time.Now().Add(5 * time.Minute),
+	})
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	model.RecordLog(userId, model.LogTypeSystem, common.NewMessage("Daily check-in, received {{quota}}", map[string]any{"quota": logger.FormatQuota(checkin.QuotaAwarded)}))
-	common.ApiSuccessT(c, "Check-in successful", gin.H{
-		"quota_awarded": checkin.QuotaAwarded,
-		"checkin_date":  checkin.CheckinDate,
-	})
+	query := url.Values{
+		"client_id": {discord.ClientId}, "redirect_uri": {fmt.Sprintf("%s/oauth/discord", system_setting.ServerAddress)},
+		"response_type": {"code"}, "scope": {"identify guilds.members.read"}, "state": {state},
+	}
+	common.ApiSuccess(c, gin.H{"authorization_url": "https://discord.com/oauth2/authorize?" + query.Encode()})
+}
+
+// OAuth tokens stay in this request and are never written to the flow or session.
+func handleOAuthCheckin(c *gin.Context, user *oauth.OAuthUser, token *oauth.OAuthToken, flow *model.AuthFlow) {
+	checkin, err := model.UserCheckin(c.Request.Context(), flow.UserId, user.ProviderUserID, token.AccessToken)
+	if err != nil {
+		common.ApiErrorStatus(c, http.StatusOK, err, gin.H{"action": "checkin"})
+		return
+	}
+	model.RecordLog(flow.UserId, model.LogTypeSystem, common.NewMessage("Daily check-in, received {{quota}}", map[string]any{"quota": logger.FormatQuota(checkin.QuotaAwarded)}))
+	c.JSON(http.StatusOK, gin.H{"success": true, "action": "checkin", "data": gin.H{"quota_awarded": checkin.QuotaAwarded, "checkin_date": checkin.CheckinDate}})
 }

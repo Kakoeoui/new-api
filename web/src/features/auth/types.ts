@@ -68,6 +68,7 @@ export interface BindEmailPayload {
 // ============================================================================
 
 export interface LoginResponse {
+  action?: 'checkin'
   success: boolean
   message: string
   data?: LoginResult
