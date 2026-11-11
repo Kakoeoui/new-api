@@ -20,6 +20,8 @@ import type { AuthBundle } from '@/stores/auth-store'
 
 import type { LoginResult } from './secure-verification/types'
 
+export type { LoginResult } from './secure-verification/types'
+
 // ============================================================================
 // API Payloads
 // ============================================================================
