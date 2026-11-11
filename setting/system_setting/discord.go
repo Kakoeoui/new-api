@@ -3,9 +3,10 @@ package system_setting
 import "github.com/QuantumNous/new-api/setting/config"
 
 type DiscordSettings struct {
-	Enabled      bool   `json:"enabled"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	Enabled                bool   `json:"enabled"`
+	ClientId               string `json:"client_id"`
+	ClientSecret           string `json:"client_secret"`
+	RequireForRegistration bool   `json:"require_for_registration"`
 }
 
 // 默认配置

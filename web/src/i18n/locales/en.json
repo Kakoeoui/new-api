@@ -7496,7 +7496,11 @@
     "Check in daily to receive random rewards (0.03 - 0.50 THB)": "Check in daily to receive random rewards (0.03 - 0.50 THB)",
     "Discord Login Required": "Discord Login Required",
     "You must sign in with a Discord account to use daily check-in (random 0.03 - 0.50 THB)": "You must sign in with a Discord account to use daily check-in (random 0.03 - 0.50 THB)",
-    "Daily check-in requires a Discord-linked account": "Daily check-in requires a Discord-linked account"
+    "Daily check-in requires a Discord-linked account": "Daily check-in requires a Discord-linked account",
+    "New accounts must be created with Discord.": "New accounts must be created with Discord.",
+    "Create your account with Discord, then set a password in Security & Access.": "Create your account with Discord, then set a password in Security & Access.",
+    "Sign in with your password or Discord, or recover your existing account with an API key": "Sign in with your password or Discord, or recover your existing account with an API key",
+    "Sign in with password": "Sign in with password"
   },
   "Announcements and timeline": "Announcements and timeline",
   "Edit announcements and timeline": "Edit announcements and timeline",

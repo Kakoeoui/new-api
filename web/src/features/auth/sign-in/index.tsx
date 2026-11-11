@@ -38,7 +38,9 @@ export function SignIn() {
             {t('Sign in')}
           </h2>
           <p className='text-muted-foreground text-center text-sm sm:text-left sm:text-base'>
-            {t('Sign in with Discord or recover your existing account with an API key')}
+            {t(
+              'Sign in with your password or Discord, or recover your existing account with an API key'
+            )}
             {!status?.self_use_mode_enabled &&
               status?.register_enabled !== false && (
                 <>

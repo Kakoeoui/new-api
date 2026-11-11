@@ -69,6 +69,7 @@ export interface BindEmailPayload {
 
 export interface LoginResponse {
   action?: 'checkin'
+  authorization_url?: string
   success: boolean
   message: string
   data?: LoginResult
@@ -137,6 +138,7 @@ export interface SystemStatus {
     password_login_enabled?: boolean
     password_login_encryption_enabled?: boolean
     password_register_enabled?: boolean
+    discord_required_for_registration?: boolean
     custom_oauth_providers?: CustomOAuthProviderInfo[]
     [key: string]: unknown
   }
@@ -184,6 +186,7 @@ export interface SystemStatus {
   password_login_enabled?: boolean
   password_login_encryption_enabled?: boolean
   password_register_enabled?: boolean
+  discord_required_for_registration?: boolean
   custom_oauth_providers?: CustomOAuthProviderInfo[]
   log_export_enabled?: boolean
   log_max_range_days?: number

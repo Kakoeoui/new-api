@@ -34,6 +34,7 @@ import {
 } from '@/features/auth/constants'
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
 import { sanitizeAuthRedirect } from '@/features/auth/lib/auth-redirect'
+import { parseDiscordCheckinAuthorizationUrl } from '@/features/auth/lib/discord-checkin'
 import {
   parseTelegramBindCallback,
   postTelegramBindResult,
@@ -229,6 +230,14 @@ function OAuthCallback() {
         if (response.data?.success) {
           completedLogin.current = loginKey
           if (response.data.action === 'checkin') {
+            if (response.data.authorization_url) {
+              window.location.replace(
+                parseDiscordCheckinAuthorizationUrl(
+                  response.data.authorization_url
+                )
+              )
+              return
+            }
             toast.success(i18next.t('Check-in successful'))
             safeNavigate('/profile', '/profile')
             return

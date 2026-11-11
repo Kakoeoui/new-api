@@ -40,6 +40,7 @@ type OAuthProvidersProps = {
   isWeChatLoading?: boolean
   redirectTo?: string
   discordLabel?: string
+  discordOnly?: boolean
 }
 
 type ProviderButton = {
@@ -58,6 +59,7 @@ export function OAuthProviders({
   isWeChatLoading = false,
   redirectTo,
   discordLabel,
+  discordOnly = false,
 }: OAuthProvidersProps) {
   const { t } = useTranslation()
   const {
@@ -147,7 +149,7 @@ export function OAuthProviders({
         {discordLabel || t('Continue with Discord')}
       </Button>
 
-      {secondaryProviderButtons.length > 0 && (
+      {!discordOnly && secondaryProviderButtons.length > 0 && (
         <>
           <div className='relative'>
             <div className='absolute inset-0 flex items-center'>

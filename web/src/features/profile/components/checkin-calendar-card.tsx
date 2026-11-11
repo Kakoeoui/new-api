@@ -42,6 +42,7 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from '@/components/ui/tooltip'
+import { parseDiscordCheckinAuthorizationUrl } from '@/features/auth/lib/discord-checkin'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import dayjs from '@/lib/dayjs'
 import { handleServerError } from '@/lib/handle-server-error'
@@ -161,14 +162,9 @@ export function CheckinCalendarCard({
       try {
         const res = await performCheckin(token)
         if (res.success && res.data?.authorization_url) {
-          const authorization = new URL(res.data.authorization_url)
-          if (
-            authorization.origin !== 'https://discord.com' ||
-            authorization.pathname !== '/oauth2/authorize'
-          ) {
-            throw new Error('Invalid Discord authorization URL')
-          }
-          window.location.assign(authorization.toString())
+          window.location.assign(
+            parseDiscordCheckinAuthorizationUrl(res.data.authorization_url)
+          )
           return
         }
         if (!token && shouldTriggerTurnstile(res.message)) {
@@ -341,11 +337,6 @@ export function CheckinCalendarCard({
                     : t(
                         'Check in daily to receive random rewards (0.03 - 0.50 THB)'
                       )}
-                </p>
-                <p className='text-muted-foreground mt-1 text-xs'>
-                  {t(
-                    'Verify with Discord for each check-in. Join our server and have Verified Kitten or an approved higher role. Small rewards are more common.'
-                  )}
                 </p>
               </div>
             </button>

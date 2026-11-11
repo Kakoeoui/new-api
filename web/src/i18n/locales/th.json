@@ -7341,7 +7341,11 @@
     "Check in daily to receive random rewards (0.03 - 0.50 THB)": "เช็คอินรายวันเพื่อรับโควต้าสุ่ม (0.03 - 0.50 บาท)",
     "Discord Login Required": "ต้องใช้บัญชี Discord",
     "You must sign in with a Discord account to use daily check-in (random 0.03 - 0.50 THB)": "ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้ (สุ่มรับ 0.03 - 0.50 บาท)",
-    "Daily check-in requires a Discord-linked account": "ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้"
+    "Daily check-in requires a Discord-linked account": "ต้องล็อกอินด้วยบัญชี Discord เท่านั้นจึงจะเช็คอินรายวันได้",
+    "New accounts must be created with Discord.": "บัญชีใหม่ต้องสมัครผ่าน Discord",
+    "Create your account with Discord, then set a password in Security & Access.": "สมัครผ่าน Discord ก่อน แล้วตั้งรหัสผ่านได้ที่หน้าความปลอดภัยและการเข้าถึง",
+    "Sign in with your password or Discord, or recover your existing account with an API key": "เข้าสู่ระบบด้วยรหัสผ่านหรือ Discord หรือกู้คืนบัญชีเดิมด้วยคีย์ API",
+    "Sign in with password": "เข้าสู่ระบบด้วยรหัสผ่าน"
   },
   "Announcements and timeline": "ประกาศและไทม์ไลน์",
   "Edit announcements and timeline": "แก้ไขประกาศและไทม์ไลน์",
