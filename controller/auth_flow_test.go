@@ -1219,10 +1219,11 @@ func TestCheckinOAuthIsSessionBoundSingleUseAndNeverStoresDiscordTokens(t *testi
 			require.NoError(t, err)
 			assert.Equal(t, "https://discord.com/oauth2/authorize", authorization.Scheme+"://"+authorization.Host+authorization.Path)
 			assert.Equal(t, "identify guilds.members.read", authorization.Query().Get("scope"))
+			assert.Equal(t, "none", authorization.Query().Get("prompt"))
 			state := authorization.Query().Get("state")
 			flow, err := model.GetAuthFlow(state, model.AuthFlowMatch{Purpose: model.AuthFlowPurposeOAuth, Intent: model.AuthFlowIntentCheckin, UserId: user.Id, SessionId: identity.SessionID})
 			require.NoError(t, err)
-			assert.Empty(t, flow.Payload)
+			assert.Equal(t, "silent", flow.Payload)
 			calls := 0
 			previousTransport := http.DefaultTransport
 			http.DefaultTransport = checkinOAuthTransport(func(r *http.Request) (*http.Response, error) {
@@ -1272,9 +1273,126 @@ func TestCheckinOAuthIsSessionBoundSingleUseAndNeverStoresDiscordTokens(t *testi
 				assert.Zero(t, saved.Quota)
 			}
 			require.NoError(t, model.DB.First(flow, flow.Id).Error)
-			assert.Empty(t, flow.Payload)
+			assert.Equal(t, "silent", flow.Payload)
 			assert.NotContains(t, completed.Body.String(), "ephemeral-discord-token")
 			assert.NotContains(t, completed.Body.String(), "never-save-refresh-token")
 		})
 	}
+}
+
+func TestCheckinSilentAuthorizationRetriesConsentOnce(t *testing.T) {
+	setupAuthFlowControllerTest(t)
+	require.NoError(t, model.DB.AutoMigrate(&model.Checkin{}))
+	previousDiscord := *system_setting.GetDiscordSettings()
+	*system_setting.GetDiscordSettings() = system_setting.DiscordSettings{Enabled: true, ClientId: "test-client", ClientSecret: "test-client-secret"}
+	previousSetting := *operation_setting.GetCheckinSetting()
+	operation_setting.GetCheckinSetting().Enabled = true
+	t.Cleanup(func() {
+		*system_setting.GetDiscordSettings() = previousDiscord
+		*operation_setting.GetCheckinSetting() = previousSetting
+	})
+	user := model.User{Username: "silent-checkin", Status: common.UserStatusEnabled, Role: common.RoleCommonUser, Group: "default", AuthVersion: 1, DiscordId: "123456789012345678"}
+	require.NoError(t, model.DB.Create(&user).Error)
+	require.NoError(t, model.PublishUserAuthCache(user.Id))
+	bundle, err := service.CreateLoginSession(user.Id, "password", "127.0.0.1", "checkin-test")
+	require.NoError(t, err)
+	identity, err := service.ParseAccessToken(bundle.AccessToken)
+	require.NoError(t, err)
+	authorization, err := createCheckinAuthorization(identity, true)
+	require.NoError(t, err)
+	parsed, err := url.Parse(authorization)
+	require.NoError(t, err)
+	state := parsed.Query().Get("state")
+	callback := func(c *gin.Context) { c.Params = gin.Params{{Key: "provider", Value: "discord"}}; HandleOAuth(c) }
+	path := "/api/oauth/discord?error=consent_required&state=" + state
+	invalid := identity
+	invalid.SessionID = "another-session"
+	denied := securityEnrollmentRequest("GET", path, "", "", invalid, callback)
+	assert.Contains(t, denied.Body.String(), `"success":false`)
+	response := securityEnrollmentRequest("GET", path, "", "", identity, callback)
+	var result struct {
+		Success bool   `json:"success"`
+		Action  string `json:"action"`
+		URL     string `json:"authorization_url"`
+	}
+	require.NoError(t, common.Unmarshal(response.Body.Bytes(), &result))
+	require.True(t, result.Success, response.Body.String())
+	assert.Equal(t, "checkin", result.Action)
+	retry, err := url.Parse(result.URL)
+	require.NoError(t, err)
+	assert.Equal(t, "https://discord.com/oauth2/authorize", retry.Scheme+"://"+retry.Host+retry.Path)
+	assert.Equal(t, "consent", retry.Query().Get("prompt"))
+	retryState := retry.Query().Get("state")
+	require.NotEmpty(t, retryState)
+	assert.NotEqual(t, state, retryState)
+	replay := securityEnrollmentRequest("GET", path, "", "", identity, callback)
+	assert.Contains(t, replay.Body.String(), `"success":false`)
+	// Cancelling the interactive retry must stop, not create an endless redirect.
+	cancelled := securityEnrollmentRequest("GET", "/api/oauth/discord?error=access_denied&state="+retryState, "", "", identity, callback)
+	require.NoError(t, common.Unmarshal(cancelled.Body.Bytes(), &result))
+	assert.False(t, result.Success, cancelled.Body.String())
+	assert.NotContains(t, cancelled.Body.String(), "authorization_url")
+	var claims int64
+	require.NoError(t, model.DB.Model(&model.Checkin{}).Where("user_id = ?", user.Id).Count(&claims).Error)
+	assert.Zero(t, claims)
+	var saved model.User
+	require.NoError(t, model.DB.First(&saved, user.Id).Error)
+	assert.Zero(t, saved.Quota)
+}
+
+func TestDiscordRequiredForNewAccountsPreservesExistingAccounts(t *testing.T) {
+	db, dialect := openTaskDialectDatabase(t, &model.User{}, &model.Log{})
+	oldDB, oldLogDB := model.DB, model.LOG_DB
+	oldMain, oldLog := common.MainDatabaseType(), common.LogDatabaseType()
+	oldRedis, oldRegister, oldPasswordRegister := common.RedisEnabled, common.RegisterEnabled, common.PasswordRegisterEnabled
+	oldNew, oldInvitee, oldInviter := common.QuotaForNewUser, common.QuotaForInvitee, common.QuotaForInviter
+	oldDiscord := *system_setting.GetDiscordSettings()
+	model.DB, model.LOG_DB = db, db
+	common.SetDatabaseTypes(dialect, dialect)
+	common.RedisEnabled, common.RegisterEnabled, common.PasswordRegisterEnabled = false, true, true
+	common.QuotaForNewUser, common.QuotaForInvitee, common.QuotaForInviter = 0, 0, 0
+	system_setting.GetDiscordSettings().RequireForRegistration = true
+	t.Cleanup(func() {
+		model.DB, model.LOG_DB = oldDB, oldLogDB
+		common.SetDatabaseTypes(oldMain, oldLog)
+		common.RedisEnabled, common.RegisterEnabled, common.PasswordRegisterEnabled = oldRedis, oldRegister, oldPasswordRegister
+		common.QuotaForNewUser, common.QuotaForInvitee, common.QuotaForInviter = oldNew, oldInvitee, oldInviter
+		*system_setting.GetDiscordSettings() = oldDiscord
+	})
+	response := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(response)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/api/user/register", strings.NewReader(`{"username":"bypass","password":"Valid-password123","discord_id":"unverified-client-id"}`))
+	Register(ctx)
+	assert.Contains(t, response.Body.String(), `"success":false`)
+	var count int64
+	require.NoError(t, db.Model(&model.User{}).Count(&count).Error)
+	assert.Zero(t, count, "direct password signup must not create an unverified account")
+	wechat := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"success":true,"data":"unbound-wechat"}`))
+	}))
+	defer wechat.Close()
+	oldWechatEnabled, oldWechatAddress := common.WeChatAuthEnabled, common.WeChatServerAddress
+	common.WeChatAuthEnabled, common.WeChatServerAddress = true, wechat.URL
+	t.Cleanup(func() { common.WeChatAuthEnabled, common.WeChatServerAddress = oldWechatEnabled, oldWechatAddress })
+	response = httptest.NewRecorder()
+	ctx, _ = gin.CreateTestContext(response)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/wechat/auth?code=valid-code", nil)
+	WeChatAuth(ctx)
+	assert.Contains(t, response.Body.String(), `"success":false`)
+	require.NoError(t, db.Model(&model.User{}).Count(&count).Error)
+	assert.Zero(t, count, "WeChat's separate registration endpoint must enforce the policy")
+	ctx, _ = gin.CreateTestContext(httptest.NewRecorder())
+	_, _, err := findOrCreateOAuthUser(ctx, &oauth.GitHubProvider{}, &oauth.OAuthUser{ProviderUserID: "new-github", Username: "new-github"}, &oauth.OAuthToken{}, "")
+	require.Error(t, err, "another OAuth provider must not bypass Discord registration")
+	created, _, err := findOrCreateOAuthUser(ctx, &oauth.DiscordProvider{}, &oauth.OAuthUser{ProviderUserID: "123456789012345678", Username: "new-discord"}, &oauth.OAuthToken{}, "")
+	require.NoError(t, err)
+	var saved model.User
+	require.NoError(t, db.First(&saved, created.Id).Error)
+	assert.Equal(t, "123456789012345678", saved.DiscordId)
+	assert.Empty(t, saved.Password, "password is set later through verified account security")
+	legacy := model.User{Username: "legacy-github", GitHubId: "already-linked", AffCode: "legacy", Status: common.UserStatusEnabled}
+	require.NoError(t, db.Create(&legacy).Error)
+	existing, _, err := findOrCreateOAuthUser(ctx, &oauth.GitHubProvider{}, &oauth.OAuthUser{ProviderUserID: "already-linked"}, &oauth.OAuthToken{}, "")
+	require.NoError(t, err)
+	assert.Equal(t, legacy.Id, existing.Id, "existing customers retain their linked login method")
 }

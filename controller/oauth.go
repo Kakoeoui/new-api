@@ -15,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -250,6 +251,16 @@ func HandleOAuth(c *gin.Context) {
 			return
 		}
 		if pendingFlow.Intent == model.AuthFlowIntentCheckin {
+			if pendingFlow.Payload == "silent" && (errorCode == "consent_required" || errorCode == "login_required" || errorCode == "interaction_required" || errorCode == "access_denied") {
+				identity, _ := middleware.GetSessionAuthIdentity(c)
+				authorizationURL, err := createCheckinAuthorization(identity, false)
+				if err != nil {
+					common.ApiErrorStatus(c, http.StatusOK, err, gin.H{"action": "checkin"})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"success": true, "action": "checkin", "authorization_url": authorizationURL})
+				return
+			}
 			common.ApiErrorStatus(c, http.StatusOK, common.NewMessage("Discord authorization was cancelled. Please try again."), gin.H{"action": "checkin"})
 			return
 		}
@@ -492,6 +503,9 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 	}
 
 	// User doesn't exist, create new user if registration is enabled
+	if system_setting.GetDiscordSettings().RequireForRegistration && provider.ProviderUserIDColumn() != "discord_id" {
+		return nil, nil, common.NewMessage("New accounts must be created with Discord.")
+	}
 	if !common.RegisterEnabled {
 		return nil, nil, &OAuthRegistrationDisabledError{}
 	}

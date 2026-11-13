@@ -83,24 +83,43 @@ func DoCheckin(c *gin.Context) {
 		writeSecurityOperationError(c, err)
 		return
 	}
+	authorizationURL, err := createCheckinAuthorization(identity, true)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, gin.H{"authorization_url": authorizationURL})
+}
+
+// Try the existing Discord grant without another consent click; an interactive
+// retry is allowed once if Discord requires sign-in or additional permission.
+func createCheckinAuthorization(identity service.AuthIdentity, silent bool) (string, error) {
 	discord := system_setting.GetDiscordSettings()
 	if !discord.Enabled || discord.ClientId == "" || discord.ClientSecret == "" {
-		common.ApiErrorT(c, "Discord verification is unavailable. Please try again later.")
-		return
+		return "", common.NewMessage("Discord verification is unavailable. Please try again later.")
+	}
+	payload := ""
+	if silent {
+		payload = "silent"
 	}
 	state, _, err := model.CreateAuthFlow(model.AuthFlowCreate{
 		Purpose: model.AuthFlowPurposeOAuth, Provider: "discord", Intent: model.AuthFlowIntentCheckin,
 		UserId: identity.UserID, SessionId: identity.SessionID, ExpiresAt: time.Now().Add(5 * time.Minute),
+		Payload: payload,
 	})
 	if err != nil {
-		common.ApiError(c, err)
-		return
+		return "", err
 	}
 	query := url.Values{
 		"client_id": {discord.ClientId}, "redirect_uri": {fmt.Sprintf("%s/oauth/discord", system_setting.ServerAddress)},
 		"response_type": {"code"}, "scope": {"identify guilds.members.read"}, "state": {state},
 	}
-	common.ApiSuccess(c, gin.H{"authorization_url": "https://discord.com/oauth2/authorize?" + query.Encode()})
+	if silent {
+		query.Set("prompt", "none")
+	} else {
+		query.Set("prompt", "consent")
+	}
+	return "https://discord.com/oauth2/authorize?" + query.Encode(), nil
 }
 
 // OAuth tokens stay in this request and are never written to the flow or session.

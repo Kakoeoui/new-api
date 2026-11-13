@@ -19,6 +19,7 @@ import (
 	"github.com/QuantumNous/new-api/service/authz"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"github.com/QuantumNous/new-api/constant"
 
@@ -217,6 +218,10 @@ func writeLoginResponse(c *gin.Context, user *model.User, bundle *service.AuthBu
 func Register(c *gin.Context) {
 	if !common.RegisterEnabled {
 		common.ApiErrorT(c, "New user registration has been disabled by administrator")
+		return
+	}
+	if system_setting.GetDiscordSettings().RequireForRegistration {
+		common.ApiErrorT(c, "New accounts must be created with Discord.")
 		return
 	}
 	if !common.PasswordRegisterEnabled {

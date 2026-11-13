@@ -16,20 +16,35 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { zodResolver } from '@hookform/resolvers/zod'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import type { z } from 'zod'
 
 import { Dialog } from '@/components/dialog'
+import { PasswordInput } from '@/components/password-input'
+import { Turnstile } from '@/components/turnstile'
 import { Button } from '@/components/ui/button'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { wechatLoginByCode } from '@/features/auth/api'
+import { login, wechatLoginByCode } from '@/features/auth/api'
 import { LegalConsent } from '@/features/auth/components/legal-consent'
 import { OAuthProviders } from '@/features/auth/components/oauth-providers'
 import { RecoverByKeyDialog } from '@/features/auth/components/recover-by-key-dialog'
+import { loginFormSchema } from '@/features/auth/constants'
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
+import { useTurnstile } from '@/features/auth/hooks/use-turnstile'
 import { beginPasskeyLogin, finishPasskeyLogin } from '@/features/auth/passkey'
 import {
   requestPasskeyAssertion,
@@ -68,6 +83,19 @@ export function UserAuthForm({
   const loginFailedMessage = t('Login failed')
 
   const { status } = useStatus()
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0)
+  const {
+    isTurnstileEnabled,
+    turnstileSiteKey,
+    turnstileToken,
+    setTurnstileToken,
+    validateTurnstile,
+  } = useTurnstile()
+  const form = useForm<z.infer<typeof loginFormSchema>>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: { username: '', password: '' },
+  })
   const passkeyLoginEnabled = Boolean(
     status?.passkey_login ?? status?.data?.passkey_login
   )
@@ -81,6 +109,41 @@ export function UserAuthForm({
     !passkeySupported ||
     (requiresLegalConsent && !agreedToLegal)
   const hasWeChatLogin = Boolean(status?.wechat_login)
+
+  async function onPasswordSubmit(data: z.infer<typeof loginFormSchema>) {
+    if (requiresLegalConsent && !agreedToLegal) {
+      toast.error(legalConsentErrorMessage)
+      return
+    }
+    if (!validateTurnstile()) return
+    const submittedToken = turnstileToken
+    if (isTurnstileEnabled) {
+      setTurnstileToken('')
+      setTurnstileWidgetKey((key) => key + 1)
+    }
+    setPasswordLoading(true)
+    try {
+      const response = await login({
+        ...data,
+        turnstile: submittedToken,
+        passwordEncryptionEnabled: Boolean(
+          status?.password_login_encryption_enabled
+        ),
+      })
+      if (!response.success) {
+        handleServerError(createServerError(response, loginFailedMessage))
+        return
+      }
+      form.setValue('password', '')
+      if (await handleLoginResult(response.data, redirectTo)) {
+        toast.success(t('Welcome back!'))
+      }
+    } catch (error) {
+      handleServerError(AuthOperationError.from(error, loginFailedMessage))
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (requiresLegalConsent) {
@@ -214,77 +277,136 @@ export function UserAuthForm({
 
   return (
     <>
-      <form
-        onSubmit={(event) => event.preventDefault()}
-        className={cn('grid gap-4', className)}
-        {...props}
-      >
-        <OAuthProviders
-          status={status}
-          redirectTo={redirectTo}
-          disabled={requiresLegalConsent && !agreedToLegal}
-          onWeChatLogin={hasWeChatLogin ? handleOpenWeChatDialog : undefined}
-          isWeChatLoading={isWeChatSubmitting}
-        />
-
-        {passkeyLoginEnabled && (
-          <div className='space-y-1'>
-            <Button
-              type='button'
-              variant='outline'
-              disabled={passkeyButtonDisabled}
-              onClick={handlePasskeyLogin}
-              className='h-11 w-full justify-center gap-2 rounded-lg'
-            >
-              {isPasskeyLoading ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <KeyRound className='h-4 w-4' />
-              )}
-              {t('Sign in with Passkey')}
-            </Button>
-            <PasskeyDomainSelector
-              domains={passkeyDomains}
-              value={passkeyRPID}
-              onChange={setPasskeyRPID}
-              disabled={passkeyButtonDisabled}
-            />
-            {!passkeySupported && (
-              <p className='text-muted-foreground text-xs'>
-                {t('Passkey is not supported on this device.')}
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className='relative my-1'>
-          <div className='absolute inset-0 flex items-center'>
-            <span className='w-full border-t' />
-          </div>
-          <div className='relative flex justify-center text-xs uppercase'>
-            <span className='bg-background text-muted-foreground px-2'>
-              {t('Or')}
-            </span>
-          </div>
-        </div>
-
-        <Button
-          type='button'
-          variant='outline'
-          onClick={() => setIsRecoverDialogOpen(true)}
-          className='h-11 w-full justify-center gap-2 rounded-lg'
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onPasswordSubmit)}
+          className={cn('grid gap-4', className)}
+          {...props}
         >
-          <KeyRound className='h-4 w-4' />
-          {t('Recover / Migrate Account with API Key')}
-        </Button>
+          {status?.password_login_enabled && (
+            <>
+              <FormField
+                control={form.control}
+                name='username'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Username')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        autoComplete='username'
+                        placeholder={t('Enter your username')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='password'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Password')}</FormLabel>
+                    <FormControl>
+                      <PasswordInput
+                        autoComplete='current-password'
+                        placeholder={t('Enter your password')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {isTurnstileEnabled && (
+                <Turnstile
+                  key={turnstileWidgetKey}
+                  siteKey={turnstileSiteKey}
+                  onVerify={setTurnstileToken}
+                  onExpire={() => setTurnstileToken('')}
+                />
+              )}
+              <Button
+                type='submit'
+                disabled={
+                  passwordLoading ||
+                  (isTurnstileEnabled && !turnstileToken) ||
+                  (requiresLegalConsent && !agreedToLegal)
+                }
+              >
+                {passwordLoading && <Loader2 className='size-4 animate-spin' />}
+                {t('Sign in with password')}
+              </Button>
+            </>
+          )}
+          <OAuthProviders
+            status={status}
+            redirectTo={redirectTo}
+            disabled={requiresLegalConsent && !agreedToLegal}
+            onWeChatLogin={hasWeChatLogin ? handleOpenWeChatDialog : undefined}
+            isWeChatLoading={isWeChatSubmitting}
+          />
 
-        <LegalConsent
-          status={status}
-          checked={agreedToLegal}
-          onCheckedChange={setAgreedToLegal}
-          className='mt-1'
-        />
-      </form>
+          {passkeyLoginEnabled && (
+            <div className='space-y-1'>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={passkeyButtonDisabled}
+                onClick={handlePasskeyLogin}
+                className='h-11 w-full justify-center gap-2 rounded-lg'
+              >
+                {isPasskeyLoading ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <KeyRound className='h-4 w-4' />
+                )}
+                {t('Sign in with Passkey')}
+              </Button>
+              <PasskeyDomainSelector
+                domains={passkeyDomains}
+                value={passkeyRPID}
+                onChange={setPasskeyRPID}
+                disabled={passkeyButtonDisabled}
+              />
+              {!passkeySupported && (
+                <p className='text-muted-foreground text-xs'>
+                  {t('Passkey is not supported on this device.')}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className='relative my-1'>
+            <div className='absolute inset-0 flex items-center'>
+              <span className='w-full border-t' />
+            </div>
+            <div className='relative flex justify-center text-xs uppercase'>
+              <span className='bg-background text-muted-foreground px-2'>
+                {t('Or')}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setIsRecoverDialogOpen(true)}
+            className='h-11 w-full justify-center gap-2 rounded-lg'
+          >
+            <KeyRound className='h-4 w-4' />
+            {t('Recover / Migrate Account with API Key')}
+          </Button>
+
+          <LegalConsent
+            status={status}
+            checked={agreedToLegal}
+            onCheckedChange={setAgreedToLegal}
+            className='mt-1'
+          />
+        </form>
+      </Form>
 
       <RecoverByKeyDialog
         open={isRecoverDialogOpen}

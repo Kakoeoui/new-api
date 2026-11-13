@@ -68,10 +68,26 @@ export function SignUp() {
         </div>
 
         <div className='grid gap-4'>
+          {status?.discord_required_for_registration && (
+            <p className='text-muted-foreground text-sm'>
+              {t(
+                'Create your account with Discord, then set a password in Security & Access.'
+              )}
+            </p>
+          )}
           <OAuthProviders
             status={status}
+            discordOnly={status?.discord_required_for_registration === true}
+            redirectTo={
+              status?.discord_required_for_registration
+                ? '/security'
+                : undefined
+            }
             discordLabel={t('Sign up with Discord')}
-            disabled={requiresLegalConsent && !agreedToLegal}
+            disabled={
+              status?.register_enabled === false ||
+              (requiresLegalConsent && !agreedToLegal)
+            }
           />
 
           <div className='relative my-1'>

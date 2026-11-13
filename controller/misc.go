@@ -89,7 +89,7 @@ func GetStatus(c *gin.Context) {
 		"self_use_mode_enabled":         operation_setting.SelfUseModeEnabled,
 		"register_enabled":              common.RegisterEnabled,
 		"password_login_enabled":        common.PasswordLoginEnabled,
-		"password_register_enabled":     common.PasswordRegisterEnabled,
+		"password_register_enabled":     common.PasswordRegisterEnabled && !system_setting.GetDiscordSettings().RequireForRegistration,
 		"default_use_auto_group":        setting.DefaultUseAutoGroup,
 
 		"password_login_encryption_enabled": common.PasswordLoginEncryptionEnabled,
@@ -128,6 +128,8 @@ func GetStatus(c *gin.Context) {
 		"quota_remind_enabled":        common.QuotaRemindEnabled,
 		"quota_remind_threshold":      common.QuotaRemindThreshold,
 	}
+
+	data["discord_required_for_registration"] = system_setting.GetDiscordSettings().RequireForRegistration
 
 	// 根据启用状态注入可选内容
 	if cs.ApiInfoEnabled {
