@@ -22,7 +22,7 @@ import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 import { expect, test, vi } from 'vitest'
 
-import fr from '@/i18n/locales/fr.json'
+import fr from '@/test/fixtures/locales/fr.json'
 
 import { ModelMappingBatchDialog } from '../model-mapping-batch-dialog'
 

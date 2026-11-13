@@ -28,11 +28,11 @@ import { I18nextProvider } from 'react-i18next'
 import { afterAll, afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import en from '@/i18n/locales/en.json'
-import zh from '@/i18n/locales/zh.json'
 import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
 } from '@/stores/system-config-store'
+import zh from '@/test/fixtures/locales/zh.json'
 
 import type { UsageLog } from '../../data/schema'
 import type { LogOtherData } from '../../types'

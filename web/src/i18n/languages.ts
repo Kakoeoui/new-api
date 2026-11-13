@@ -24,16 +24,12 @@ export const INTERFACE_LANGUAGE_OPTIONS = [
 export type InterfaceLanguageCode =
   (typeof INTERFACE_LANGUAGE_OPTIONS)[number]['code']
 
-export function normalizeInterfaceLanguage(value?: string | null): string {
-  if (!value) return 'en'
-
-  let normalized = value.trim().replaceAll('_', '-').toLowerCase()
-  if (normalized === 'th' || normalized.startsWith('th-')) normalized = 'th'
-  if (normalized === 'en' || normalized.startsWith('en-')) normalized = 'en'
-
-  return INTERFACE_LANGUAGE_OPTIONS.some((lang) => lang.code === normalized)
-    ? normalized
-    : 'en'
+export function normalizeInterfaceLanguage(
+  value?: string | null
+): InterfaceLanguageCode {
+  const normalized = value?.trim().replaceAll('_', '-').toLowerCase()
+  if (normalized === 'en' || normalized?.startsWith('en-')) return 'en'
+  return 'th'
 }
 
 export function convertDetectedLanguage(value: string): string {

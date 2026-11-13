@@ -56,6 +56,19 @@ describe('convertDetectedLanguage', () => {
 })
 
 describe('Thai interface language', () => {
+  test.each([undefined, null, '', 'zh-CN', 'ja', 'fr-FR', 'unknown'])(
+    'defaults %s to Thai',
+    (value) => {
+      expect(normalizeInterfaceLanguage(value)).toBe('th')
+    }
+  )
+
+  test.each(['en', 'en-US', 'en_US'])(
+    'preserves explicit English %s',
+    (value) => {
+      expect(normalizeInterfaceLanguage(value)).toBe('en')
+    }
+  )
   test.each(['th', 'th-TH', 'th_TH'])('normalizes %s', (language) => {
     expect(normalizeInterfaceLanguage(language)).toBe('th')
     expect(convertDetectedLanguage(language)).toBe('th')

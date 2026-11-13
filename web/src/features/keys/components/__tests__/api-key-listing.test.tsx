@@ -43,12 +43,12 @@ import { I18nextProvider } from 'react-i18next'
 import { Toaster, toast } from 'sonner'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-import zh from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
 import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
 } from '@/stores/system-config-store'
+import zh from '@/test/fixtures/locales/zh.json'
 
 import { apiKeySchema, type ApiKey } from '../../types'
 import { ApiKeyQuotaCell } from '../api-key-quota-cell'
@@ -397,8 +397,12 @@ it.each([
   async (status, expectedBadge) => {
     await renderKeysPage(status)
     expect(screen.getByText(expectedBadge)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Disable' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Enable' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Disable' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Enable' })
+    ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
   }
 )

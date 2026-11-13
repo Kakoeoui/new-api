@@ -43,7 +43,6 @@ import { I18nextProvider } from 'react-i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { TooltipProvider } from '@/components/ui/tooltip'
-import zh from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
 import { formatTimestampToDate } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth-store'
@@ -51,6 +50,7 @@ import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
 } from '@/stores/system-config-store'
+import zh from '@/test/fixtures/locales/zh.json'
 
 import type { User } from '../../types'
 import { useUsersColumns } from '../users-columns'
