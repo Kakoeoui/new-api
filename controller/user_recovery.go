@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/middleware"
@@ -58,8 +59,26 @@ func RecoverAccountByApiKey(c *gin.Context) {
 		if subtle.ConstantTimeCompare([]byte(matchedToken.Key), []byte(rawKey)) != 1 {
 			return errInvalidRecoveryCredentials
 		}
+		if matchedToken.Status != common.TokenStatusEnabled || (matchedToken.ExpiredTime != -1 && matchedToken.ExpiredTime <= time.Now().Unix()) {
+			return errInvalidRecoveryCredentials
+		}
+		state, err := model.GetUserVerificationStateForUpdate(tx, targetUser.Id)
+		if err != nil {
+			return err
+		}
+		if state.Status != common.UserStatusEnabled || state.AuthVersion != targetUser.AuthVersion {
+			return errInvalidRecoveryCredentials
+		}
+		// Recover protected accounts through the shared login challenge. Do not
+		// transfer identities, keys or money before the second factor succeeds.
+		if state.HasTwoFA || state.HasPasskey {
+			return nil
+		}
 
 		if hasSession && identity.UserID > 0 && identity.UserID != targetUser.Id {
+			if err := model.ValidateAuthSessionWithTx(tx, identity); err != nil {
+				return err
+			}
 			var currentUser model.User
 			err := tx.First(&currentUser, identity.UserID).Error
 			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -128,10 +147,6 @@ func RecoverAccountByApiKey(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(targetUser.DiscordId) != "" {
-		c.Set("login_method", "oauth:discord")
-	} else {
-		c.Set("login_method", "key_recovery")
-	}
-	setupLoginAtAuthVersion(targetUser, targetUser.AuthVersion, c)
+	c.Set("login_method", "key_recovery")
+	setupLogin(targetUser, nil, c)
 }

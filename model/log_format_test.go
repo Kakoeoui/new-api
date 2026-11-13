@@ -87,11 +87,14 @@ func TestTaskPluginLogVisibilityIsRoleSeparated(t *testing.T) {
 
 func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 	other := common.MapToJsonStr(map[string]any{
-		"request_path":  "/v1/chat/completions",
-		"channel_id":    202,
-		"channel_name":  "legacy-secret-channel",
-		"channel_type":  1,
-		"reject_reason": "legacy-policy-rejection",
+		"request_path":        "/v1/chat/completions",
+		"channel_id":          202,
+		"channel_name":        "legacy-secret-channel",
+		"channel_type":        1,
+		"reject_reason":       "legacy-policy-rejection",
+		"is_model_mapped":     true,
+		"upstream_model_name": "private-upstream-model",
+		"response_model":      "private-response-model",
 		"admin_info": map[string]any{
 			"existing_admin_field": "preserved",
 		},
@@ -127,6 +130,9 @@ func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 			"admin_info",
 			"root_info",
 			"audit_info",
+			"is_model_mapped",
+			"upstream_model_name",
+			"response_model",
 		} {
 			assert.NotContains(t, parsed, key)
 		}
@@ -140,6 +146,7 @@ func TestLegacyLogOtherVisibilityIsRoleSeparated(t *testing.T) {
 		parsed, err := common.StrToMap(logs[0].Other)
 		require.NoError(t, err)
 		assert.Equal(t, "legacy-secret-channel", parsed["channel_name"])
+		assert.Equal(t, "private-upstream-model", parsed["upstream_model_name"])
 		assert.NotContains(t, parsed, "reject_reason")
 		assert.NotContains(t, parsed, "root_info")
 		assert.Contains(t, parsed, "audit_info")

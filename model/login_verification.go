@@ -24,6 +24,12 @@ func GetUserVerificationState(userID int) (*UserVerificationState, error) {
 	return getUserVerificationState(DB, userID, false)
 }
 
+// GetUserVerificationStateForUpdate serializes recovery writes with changes to
+// the account's authentication methods in the caller's transaction.
+func GetUserVerificationStateForUpdate(tx *gorm.DB, userID int) (*UserVerificationState, error) {
+	return getUserVerificationState(tx, userID, true)
+}
+
 func getUserVerificationState(tx *gorm.DB, userID int, forUpdate bool) (*UserVerificationState, error) {
 	if userID <= 0 {
 		return nil, ErrUserSessionInvalid

@@ -37,9 +37,9 @@ import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-import zhTW from '@/i18n/locales/zh-TW.json'
-import zh from '@/i18n/locales/zh.json'
 import { api } from '@/lib/api'
+import zhTW from '@/test/fixtures/locales/zh-TW.json'
+import zh from '@/test/fixtures/locales/zh.json'
 
 import { CommonLogsFilterBar } from '../common-logs-filter-bar'
 import { CompactDateTimeRangePicker } from '../compact-date-time-range-picker'

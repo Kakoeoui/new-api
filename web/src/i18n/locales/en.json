@@ -6216,6 +6216,7 @@
     "Task plugins": "Task plugins",
     "Task Plugins": "Task Plugins",
     "Task pricing": "Task pricing",
+    "Task pricing not configured": "Task pricing not configured",
     "Task pricing must be converted manually using the task usage schema.": "Task pricing must be converted manually using the task usage schema.",
     "Task timed out": "Task timed out",
     "Task timed out (a task left by the old system is not refunded; contact the administrator)": "Task timed out (a task left by the old system is not refunded; contact the administrator)",

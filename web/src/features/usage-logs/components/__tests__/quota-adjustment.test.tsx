@@ -36,11 +36,11 @@ import {
 } from 'vitest'
 
 import en from '@/i18n/locales/en.json'
-import zh from '@/i18n/locales/zh.json'
 import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
 } from '@/stores/system-config-store'
+import zh from '@/test/fixtures/locales/zh.json'
 
 import type { UsageLog } from '../../data/schema'
 import { renderAuditContent } from '../../lib/format'
